@@ -465,7 +465,9 @@ fn kill_container(runtime: &RuntimeInfo, name: &str, child: &mut std::process::C
 
 // ---------------------------------------------------------------------------
 
-#[cfg(test)]
+// The suite drives a fake runtime built from `#!/bin/sh` scripts (unix
+// only by construction); production Windows uses the real docker CLI.
+#[cfg(all(test, unix))]
 mod tests {
     use super::*;
     use crate::bundle::Paper;
