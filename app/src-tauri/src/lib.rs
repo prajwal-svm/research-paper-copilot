@@ -4942,6 +4942,20 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
+            // Release bundles ship PDFium in resources/pdfium (the release
+            // workflow copies it in); point the core there unless the
+            // developer already set PDFIUM_LIB_DIR. Dev builds keep the
+            // vendor/ and system fallbacks.
+            if std::env::var("PDFIUM_LIB_DIR").is_err() {
+                if let Ok(dir) = app
+                    .path()
+                    .resolve("resources/pdfium", tauri::path::BaseDirectory::Resource)
+                {
+                    if dir.exists() {
+                        std::env::set_var("PDFIUM_LIB_DIR", dir.to_string_lossy().to_string());
+                    }
+                }
+            }
             let library_root = app
                 .path()
                 .app_data_dir()

@@ -1,0 +1,80 @@
+name: Release
+
+# Tag a version (git tag v0.1.0 && git push origin v0.1.0) and this builds
+# installers for macOS, Windows, and Linux and publishes them on the
+# GitHub Release — permanent public download links.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+  NODE_OPTIONS: "--max-old-space-size=4096"
+
+defaults:
+  run:
+    working-directory: app
+
+jobs:
+  build-and-release:
+    name: Release build (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file \
+            libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: app
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Fetch PDFium
+        shell: bash
+        run: ./scripts/fetch-pdfium.sh
+
+      - name: Bundle PDFium into app resources
+        shell: bash
+        run: |
+          mkdir -p src-tauri/resources/pdfium
+          cp -r vendor/pdfium/lib/* src-tauri/resources/pdfium/
+
+      - name: Build Tauri app
+        run: npm run tauri build
+
+      - name: Publish release artifacts
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: false
+          generate_release_notes: true
+          files: |
+            app/target/release/bundle/dmg/*.dmg
+            app/target/release/bundle/macos/*.app.tar.gz
+            app/target/release/bundle/msi/*.msi
+            app/target/release/bundle/nsis/*-setup.exe
+            app/target/release/bundle/deb/*.deb
+            app/target/release/bundle/rpm/*.rpm
+            app/target/release/bundle/appimage/*.AppImage

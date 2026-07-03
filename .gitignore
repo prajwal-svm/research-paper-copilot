@@ -26,3 +26,6 @@ tokens.json
 
 # --- OS ---
 .DS_Store
+
+# Release-build staging (copied from vendor/ by the release workflow)
+src-tauri/resources/pdfium/
