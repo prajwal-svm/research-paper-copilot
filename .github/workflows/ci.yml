@@ -40,6 +40,10 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+          # wasi target: the wasi_roundtrip test and the web_bundle_open
+          # perf benchmark build the core for wasm32-wasip1 from inside
+          # cargo test.
+          targets: wasm32-wasip1
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -78,9 +82,7 @@ jobs:
 
       - name: Core builds for web (wasm32-wasip1, native features excluded)
         shell: bash
-        run: |
-          rustup target add wasm32-wasip1
-          ./scripts/check-wasm.sh
+        run: ./scripts/check-wasm.sh
 
       # First run on a new OS writes a render-golden candidate and fails;
       # download the artifact, eyeball it, commit it as the golden.
