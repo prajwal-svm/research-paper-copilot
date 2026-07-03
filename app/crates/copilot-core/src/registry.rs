@@ -460,11 +460,13 @@ pub fn publish_preview(bundle: &Bundle) -> std::io::Result<PublishPreview> {
         for entry in std::fs::read_dir(dir)? {
             let entry = entry?;
             let path = entry.path();
+            // Bundle paths are '/'-keyed everywhere (allowlist matching,
+            // layer manifests) — normalize Windows separators.
             let rel = path
                 .strip_prefix(root)
                 .unwrap_or(&path)
                 .to_string_lossy()
-                .to_string();
+                .replace('\\', "/");
             let first = rel.split('/').next().unwrap_or("").to_string();
             let name = entry.file_name().to_string_lossy().to_string();
             if let Some(reason) = exclusion_reason(&first, &name) {
