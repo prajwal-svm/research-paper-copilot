@@ -20,7 +20,6 @@ pub mod concepts;
 pub mod context;
 pub mod contributions;
 #[cfg(feature = "native")]
-#[cfg(feature = "native")]
 pub mod embeddings;
 #[cfg(feature = "native")]
 pub mod equations;

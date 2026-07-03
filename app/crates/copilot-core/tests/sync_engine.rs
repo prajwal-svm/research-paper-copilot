@@ -126,7 +126,6 @@ fn two_devices_converge_with_all_data_from_both() {
             "second from B".to_string()
         ]
         .into_iter()
-        .map(|s| s)
         .collect::<std::collections::BTreeSet<_>>()
         .into_iter()
         .collect::<Vec<_>>(),
@@ -152,6 +151,7 @@ fn kill_mid_push_leaves_previous_state_visible_and_resumes() {
     let total_new_blobs = 5; // pdf, metadata, notes journal, + first-paper churn
     let _ = total_new_blobs;
     // Fail on the 3rd put of this cycle.
+    #[allow(dead_code)]
     struct FailAfter;
     // Simulate: allow 2 puts, then fail everything else this cycle.
     // MemoryRemote counts down fail_next_puts on each put; to fail LATER

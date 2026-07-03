@@ -169,17 +169,17 @@ fn err(status: StatusCode, message: impl Into<String>) -> Response {
     (status, message.into()).into_response()
 }
 
-fn identify(state: &AppState, headers: &HeaderMap) -> Result<Identity, Response> {
+fn identify(state: &AppState, headers: &HeaderMap) -> Result<Identity, Box<Response>> {
     let token = headers
         .get("authorization")
         .and_then(|v| v.to_str().ok())
         .and_then(|v| v.strip_prefix("Bearer "))
-        .ok_or_else(|| err(StatusCode::UNAUTHORIZED, "missing bearer token"))?;
+        .ok_or_else(|| Box::new(err(StatusCode::UNAUTHORIZED, "missing bearer token")))?;
     state
         .tokens
         .get(token)
         .cloned()
-        .ok_or_else(|| err(StatusCode::UNAUTHORIZED, "unknown token"))
+        .ok_or_else(|| Box::new(err(StatusCode::UNAUTHORIZED, "unknown token")))
 }
 
 // ---------------------------------------------------------------------------
@@ -254,7 +254,7 @@ async fn publish_manifest(
 ) -> Response {
     let identity = match identify(&state, &headers) {
         Ok(identity) => identity,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     if manifest.canonical_id != key {
         return err(StatusCode::BAD_REQUEST, "manifest canonical_id mismatch");
@@ -338,7 +338,7 @@ async fn upload_blob(
     body: axum::body::Bytes,
 ) -> Response {
     if let Err(response) = identify(&state, &headers) {
-        return response;
+        return *response;
     }
     if body.len() as u64 > state.max_layer_bytes {
         return err(StatusCode::PAYLOAD_TOO_LARGE, "blob exceeds size cap");

@@ -249,6 +249,7 @@ pub fn regenerate(
 mod tests {
     use super::*;
 
+    #[allow(clippy::type_complexity)]
     fn inputs() -> (
         Vec<(String, String, Option<String>)>,
         Vec<(String, Vec<String>)>,

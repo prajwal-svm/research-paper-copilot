@@ -1131,8 +1131,7 @@ mod tests {
             softmax_pos < multihead_pos,
             "prerequisites come before dependents"
         );
-        drop(softmax);
-        drop(multihead);
+        let _ = (softmax, multihead);
     }
 
     #[test]

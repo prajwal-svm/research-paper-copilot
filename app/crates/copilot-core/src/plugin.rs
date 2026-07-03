@@ -508,7 +508,7 @@ mod consent_tests {
         record_consent(&journal, "echo", "network", true).unwrap();
         assert!(current_grants(&journal)["echo"].contains("network"));
         record_consent(&journal, "echo", "network", false).unwrap();
-        assert!(current_grants(&journal).get("echo").is_none(), "revoked");
+        assert!(!current_grants(&journal).contains_key("echo"), "revoked");
         // History remains auditable — both events are in the journal.
         assert_eq!(journal.read_all::<ConsentEvent>().unwrap().len(), 2);
     }

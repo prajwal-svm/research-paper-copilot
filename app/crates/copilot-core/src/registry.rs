@@ -648,7 +648,7 @@ impl RegistryClient {
             .call()
             .map_err(|e| match e {
                 ureq::Error::Status(404, _) => {
-                    return RegistryHttpError::Rejected {
+                    RegistryHttpError::Rejected {
                         status: 404,
                         body: String::new(),
                     }

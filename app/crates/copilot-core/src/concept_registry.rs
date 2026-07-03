@@ -251,6 +251,7 @@ impl ConceptRegistry {
     /// [`AUTO_MERGE_SIMILARITY`] also link. Unmatched nodes create new
     /// global concepts. Idempotent per (paper, node); split pairs respected.
     /// Returns the number of nodes linked to *existing* concepts.
+    #[allow(clippy::type_complexity)]
     pub fn auto_link(
         &self,
         paper_id: &str,

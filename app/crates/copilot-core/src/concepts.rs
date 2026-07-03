@@ -367,6 +367,7 @@ pub enum ConceptsError {
 
 /// Run stage 5: build the graph (LLM via `llm` closure when provided, else
 /// heuristic), apply stored user overrides, write `knowledge_graph.json`.
+#[allow(clippy::type_complexity)]
 pub fn run_concepts_stage(
     bundle: &Bundle,
     llm: Option<&dyn Fn(&str) -> Option<String>>,

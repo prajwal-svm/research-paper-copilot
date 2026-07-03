@@ -203,7 +203,7 @@ fn live_minio_backed_registry_roundtrip() {
     assert!(layers.iter().any(|l| l.version == version));
     let pulled = client.blob("arxiv:live", version).unwrap();
     verify_layer(
-        &layers.iter().find(|l| l.version == version).unwrap(),
+        layers.iter().find(|l| l.version == version).unwrap(),
         &pulled,
     )
     .unwrap();

@@ -211,6 +211,7 @@ fn urlencode(text: &str) -> String {
 /// uses the local embedder when available (MiniLM cosine over title+abstract),
 /// else a token-overlap fallback — either way the evidence is real search
 /// results, and the scoring method is recorded implicitly by the runtime.
+#[allow(clippy::type_complexity)]
 pub fn score_and_judge(
     claim: &str,
     works: Vec<FoundWork>,

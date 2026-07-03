@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
   pull_request:
   workflow_dispatch:
   schedule:
@@ -10,6 +10,9 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  # The frontend bundle (Excalidraw, BlockNote, pdf.js) with sourcemaps
+  # exceeds Node's default ~2GB heap on runners.
+  NODE_OPTIONS: "--max-old-space-size=4096"
 
 # All code lives under app/; docs and specs live at the repo root.
 defaults:
@@ -54,6 +57,9 @@ jobs:
       - name: Typecheck & build frontend
         run: npm run build
 
+      - name: Build web target (platform parity)
+        run: npm run build:web
+
       - name: Validate .research format schemas
         run: npm run validate:schemas
 
@@ -69,6 +75,12 @@ jobs:
 
       - name: Rust tests
         run: cargo test --workspace
+
+      - name: Core builds for web (wasm32-wasip1, native features excluded)
+        shell: bash
+        run: |
+          rustup target add wasm32-wasip1
+          ./scripts/check-wasm.sh
 
       # First run on a new OS writes a render-golden candidate and fails;
       # download the artifact, eyeball it, commit it as the golden.

@@ -10,7 +10,6 @@ use std::path::Path;
 
 use schemars::{schema_for, Schema};
 
-use crate::bundle::FORMAT_MAJOR;
 
 /// Every schema'd bundle file kind: (file kind name, schema).
 /// Kind names match the bundle file they describe.
@@ -157,6 +156,7 @@ pub fn validate_bundle(root: &Path) -> io::Result<Vec<Violation>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::bundle::FORMAT_MAJOR;
     use std::path::PathBuf;
 
     fn published_dir() -> PathBuf {
