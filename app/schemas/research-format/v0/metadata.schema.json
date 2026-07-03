@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://research-paper-copilot.dev/schemas/research-format/v0/metadata.schema.json",
+  "title": "metadata.json — bundle manifest for the .research format v0",
+  "type": "object",
+  "required": ["format_version", "created_at", "paper", "content_hashes", "pipeline"],
+  "additionalProperties": false,
+  "properties": {
+    "format_version": {
+      "$ref": "common.schema.json#/$defs/semver",
+      "description": "Semver of the .research format. Readers MUST open any bundle of the same major version and refuse newer majors with an upgrade message."
+    },
+    "created_at": { "$ref": "common.schema.json#/$defs/timestamp" },
+    "updated_at": { "$ref": "common.schema.json#/$defs/timestamp" },
+    "paper": {
+      "type": "object",
+      "required": ["title"],
+      "additionalProperties": false,
+      "properties": {
+        "title": { "type": "string" },
+        "authors": { "type": "array", "items": { "type": "string" } },
+        "abstract": { "type": "string" },
+        "published_at": { "type": "string" },
+        "identifiers": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "arxiv_id": { "type": "string" },
+            "doi": { "type": "string" }
+          }
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "description": "Where the original PDF came from.",
+      "required": ["imported_from", "imported_at"],
+      "additionalProperties": false,
+      "properties": {
+        "imported_from": { "type": "string", "enum": ["file", "drag_drop", "arxiv", "doi", "citation_import", "bundled"] },
+        "imported_at": { "$ref": "common.schema.json#/$defs/timestamp" },
+        "original_filename": { "type": "string" },
+        "url": { "type": "string", "format": "uri" }
+      }
+    },
+    "content_hashes": {
+      "type": "object",
+      "description": "Content hashes of bundle files, keyed by bundle-relative path. `original.pdf` is mandatory — the PDF is immutable and content-addressed.",
+      "required": ["original.pdf"],
+      "properties": {
+        "original.pdf": { "$ref": "common.schema.json#/$defs/sha256" }
+      },
+      "additionalProperties": { "$ref": "common.schema.json#/$defs/sha256" }
+    },
+    "pipeline": {
+      "type": "object",
+      "description": "Per-stage provenance. Stage keys: layout, objects, enrichment_parsing (tables/equations/citations), embeddings, llm_enrichment.",
+      "required": ["stages"],
+      "additionalProperties": false,
+      "properties": {
+        "stages": {
+          "type": "object",
+          "additionalProperties": { "$ref": "common.schema.json#/$defs/stage_record" }
+        }
+      }
+    },
+    "embedding_model": {
+      "type": "object",
+      "description": "Pinned local embedding model so embeddings.bin is interpretable forever.",
+      "required": ["name", "dimensions"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "dimensions": { "type": "integer", "minimum": 1 },
+        "quantization": { "type": "string" }
+      }
+    }
+  }
+}

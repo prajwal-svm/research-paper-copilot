@@ -1,0 +1,49 @@
+{
+  "pipeline_version": "0.1.0",
+  "pages": [
+    {
+      "index": 0,
+      "width": 612,
+      "height": 792,
+      "rotation": 0,
+      "is_scanned": false,
+      "blocks": [
+        {
+          "id": "0e347740-93a2-4b40-8f47-6f8a3ed1a001",
+          "kind": "heading",
+          "bbox": { "page": 0, "x": 133.8, "y": 82.3, "width": 344.4, "height": 22.0 },
+          "text": "Attention Is All You Need",
+          "confidence": 0.99
+        },
+        {
+          "id": "0e347740-93a2-4b40-8f47-6f8a3ed1a002",
+          "kind": "text",
+          "bbox": { "page": 0, "x": 108.0, "y": 405.5, "width": 396.0, "height": 128.4 },
+          "column": 0,
+          "text": "The dominant sequence transduction models are based on complex recurrent or convolutional neural networks...",
+          "confidence": 0.97
+        },
+        {
+          "id": "0e347740-93a2-4b40-8f47-6f8a3ed1a003",
+          "kind": "footnote",
+          "bbox": { "page": 0, "x": 108.0, "y": 700.0, "width": 396.0, "height": 30.0 },
+          "text": "Equal contribution.",
+          "confidence": 0.88
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "width": 612,
+      "height": 792,
+      "blocks": [
+        {
+          "id": "0e347740-93a2-4b40-8f47-6f8a3ed1a010",
+          "kind": "equation",
+          "bbox": { "page": 3, "x": 196.7, "y": 310.2, "width": 218.6, "height": 38.1 },
+          "confidence": 0.93
+        }
+      ]
+    }
+  ]
+}

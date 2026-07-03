@@ -1,0 +1,51 @@
+{
+  "node": "cd7bad5f-ff3a-5830-90e1-72a08d085411",
+  "items": [
+    {
+      "id": "76d11dc8-50f5-4875-9a26-b50bed3a874c",
+      "question": "Based on the provided table of contents, which topic is covered *after* the 'Abstract' section in this paper?",
+      "options": [
+        "Methodology",
+        "1 Introduction",
+        "Experiments",
+        "Conclusion"
+      ],
+      "correct": 1,
+      "explanation": "The paper structure lists 'Abstract' followed by '1 Introduction', indicating that the Introduction section comes immediately after the Abstract.",
+      "anchor_object": "da0119a8-7810-5f01-8835-ec41b296904d",
+      "anchor_hash": "sha256:d21b4a64a2d8656a0fdf7ab2e89a49164ac504686cfa2a3d442e87c209286330",
+      "stale": false
+    },
+    {
+      "id": "5cd587a2-ff98-463c-a866-7351f92d81f9",
+      "question": "According to the paper's structure, what is the title of Section 1?",
+      "options": [
+        "Sequence Transduction",
+        "Introduction",
+        "Related Work",
+        "Background"
+      ],
+      "correct": 1,
+      "explanation": "The text explicitly lists '1 Introduction' as the header following the Abstract.",
+      "anchor_object": "da0119a8-7810-5f01-8835-ec41b296904d",
+      "anchor_hash": "sha256:d21b4a64a2d8656a0fdf7ab2e89a49164ac504686cfa2a3d442e87c209286330",
+      "stale": false
+    },
+    {
+      "id": "9634c66f-0da7-4f06-80fe-384a403aee3b",
+      "question": "Which section of the paper appears immediately before '1 Introduction'?",
+      "options": [
+        "References",
+        "Table of Contents",
+        "Abstract",
+        "Acknowledgements"
+      ],
+      "correct": 2,
+      "explanation": "The provided text shows the order as 'Abstract' followed by '1 Introduction', meaning the Abstract is the preceding section.",
+      "anchor_object": "da0119a8-7810-5f01-8835-ec41b296904d",
+      "anchor_hash": "sha256:d21b4a64a2d8656a0fdf7ab2e89a49164ac504686cfa2a3d442e87c209286330",
+      "stale": false
+    }
+  ],
+  "generated_at": "2026-07-02T11:50:14.280914Z"
+}

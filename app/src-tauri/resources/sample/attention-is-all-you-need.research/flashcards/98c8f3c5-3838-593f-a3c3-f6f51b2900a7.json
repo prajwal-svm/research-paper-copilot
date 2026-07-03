@@ -1,0 +1,30 @@
+{
+  "node": "98c8f3c5-3838-593f-a3c3-f6f51b2900a7",
+  "cards": [
+    {
+      "id": "8d16402e-a152-4ae0-81bc-d461f4ec83b8",
+      "front": "Why is 'Positional Encoding' necessary in the Transformer architecture?",
+      "back": "Because the model contains no recurrence and no convolution, positional encoding is injected to give the model a sense of the order of the sequence.",
+      "anchor_object": "edb38348-9a37-5e6f-9215-cfe0b9ac92d2",
+      "anchor_hash": "sha256:7cdb568f32e8ef05031656c2b1bf5db1f07c9893e420ac2e7c92591538b38fbb",
+      "stale": false
+    },
+    {
+      "id": "f49f0e8e-4177-4229-9613-891a4fe8a3b7",
+      "front": "What functions are used to generate Positional Encodings in the Transformer?",
+      "back": "Sine and cosine functions of different frequencies.",
+      "anchor_object": "edb38348-9a37-5e6f-9215-cfe0b9ac92d2",
+      "anchor_hash": "sha256:7cdb568f32e8ef05031656c2b1bf5db1f07c9893e420ac2e7c92591538b38fbb",
+      "stale": false
+    },
+    {
+      "id": "ec7f52c2-0a66-41ef-82ea-a347f6d2180f",
+      "front": "What property allows the model to easily learn relative positions using the proposed sine/cosine encodings?",
+      "back": "For any fixed offset k, the encoding for position (i + k) can be represented as a linear function of the encoding for position i.",
+      "anchor_object": "edb38348-9a37-5e6f-9215-cfe0b9ac92d2",
+      "anchor_hash": "sha256:7cdb568f32e8ef05031656c2b1bf5db1f07c9893e420ac2e7c92591538b38fbb",
+      "stale": false
+    }
+  ],
+  "generated_at": "2026-07-02T11:48:07.290648Z"
+}

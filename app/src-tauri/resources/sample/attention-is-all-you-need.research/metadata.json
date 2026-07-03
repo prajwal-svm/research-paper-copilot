@@ -1,0 +1,85 @@
+{
+  "format_version": "0.1.0",
+  "created_at": "2026-07-02T09:01:46.856409Z",
+  "updated_at": "2026-07-02T11:49:58.006375Z",
+  "paper": {
+    "title": "Attention Is All You Need",
+    "authors": [
+      "Ashish Vaswani",
+      "Noam Shazeer",
+      "Niki Parmar",
+      "Jakob Uszkoreit",
+      "Llion Jones",
+      "Aidan N. Gomez",
+      "Lukasz Kaiser",
+      "Illia Polosukhin"
+    ],
+    "abstract": "The dominant sequence transduction models are based on complex recurrent or convolutional neural networks in an encoder-decoder configuration. The best performing models also connect the encoder and decoder through an attention mechanism. We propose a new simple network architecture, the Transformer, based solely on attention mechanisms, dispensing with recurrence and convolutions entirely. Experiments on two machine translation tasks show these models to be superior in quality while being more parallelizable and requiring significantly less time to train. Our model achieves 28.4 BLEU on the WMT 2014 English-to-German translation task, improving over the existing best results, including ensembles by over 2 BLEU. On the WMT 2014 English-to-French translation task, our model establishes a new single-model state-of-the-art BLEU score of 41.8 after training for 3.5 days on eight GPUs, a small fraction of the training costs of the best models from the literature. We show that the Transformer generalizes well to other tasks by applying it successfully to English constituency parsing both with large and limited training data.",
+    "identifiers": {
+      "arxiv_id": "1706.03762"
+    }
+  },
+  "source": {
+    "imported_from": "bundled",
+    "imported_at": "2026-07-02T09:01:46.856409Z"
+  },
+  "content_hashes": {
+    "citations.json": "sha256:7367f038982568d75fd94401cddeaffdd1af6b4a2c649086dd0e8bcbd094432e",
+    "embeddings_index.json": "sha256:e06aa7cadbcf37d70e5b85083d26c2ca5a6ec66d78028d1ee74d2151916ded07",
+    "equations/024f4e64-24b3-5994-87b7-1c70b09dc2a1.json": "sha256:1569e588a2ea67be0d721064e35609a05cee1f554886fc0198d8e3bd7d7450fb",
+    "equations/0b8cfaed-e094-502f-bd22-40667209e6b7.json": "sha256:701958aebd950c9fb2831a80e44ccd671f53c6f1ae050aa3f7e7d35fec910527",
+    "equations/44c92032-6c87-5a39-b1cd-cd875c863e92.json": "sha256:501aa995839ac6f8c7928ff69cc388cfc1edf05063b5fd11b5347e72a2a7d224",
+    "equations/4834f069-1b8b-53dd-947f-460df772d4ac.json": "sha256:5749187732d58ab8d69a26622efe88a2bf171921e6dabbf158f42c0b747038b8",
+    "knowledge_graph.json": "sha256:eb7e6679030ae3c301ccf0ce145b0a546d56ee55145be1207950b23e141676bc",
+    "layout.json": "sha256:5d873cbb3c896ac950949db546724897c228037a51c2253be6f35c70c820bc3b",
+    "original.pdf": "sha256:bdfaa68d8984f0dc02beaca527b76f207d99b666d31d1da728ee0728182df697",
+    "semantic_tree.json": "sha256:18d8056779c472c1c930cd08ec13f809664be59250e4bf755f55eb3ee19ccf2f",
+    "tables/409c76a2-fb81-53b2-88e0-6cd78ab4bf7f.json": "sha256:c5e8a1ff923ebf77a9f97eca4bdb7ff1a43f550834681fc778c3789f363db582",
+    "tables/aeea2bcf-1c4b-5c73-83b5-e0d40df19fe6.json": "sha256:97e9411f7616c166a8c53283e888f92fb4b10da965b1fd2bd2aa1ffb51db97cb",
+    "tables/d2177a27-5814-5d18-94dd-2f21a3324f47.json": "sha256:3d2b45c681e6ecce9aa21e3afc6a2c4f6052e745a48dfd1450a6ebf8a626abaa",
+    "tables/e8532d2e-f067-501c-8c88-c95ee6a94e68.json": "sha256:2b17c3e7b9122a29e8250c530fdb28f036801244f755729dad0b8d408b168ca5"
+  },
+  "pipeline": {
+    "stages": {
+      "citations": {
+        "completed_at": "2026-07-02T09:04:21.998843Z",
+        "pipeline_version": "0.1.0",
+        "status": "complete"
+      },
+      "concepts": {
+        "completed_at": "2026-07-02T11:49:57.997625Z",
+        "pipeline_version": "0.1.0",
+        "started_at": "2026-07-02T11:49:27.314469Z",
+        "status": "complete"
+      },
+      "embeddings": {
+        "completed_at": "2026-07-02T09:02:02.304069Z",
+        "pipeline_version": "0.1.0",
+        "started_at": "2026-07-02T09:01:47.468665Z",
+        "status": "complete"
+      },
+      "enrichment_parsing": {
+        "completed_at": "2026-07-02T09:01:47.320638Z",
+        "pipeline_version": "0.1.0",
+        "started_at": "2026-07-02T09:01:47.16042Z",
+        "status": "complete"
+      },
+      "layout": {
+        "completed_at": "2026-07-02T09:01:47.081167Z",
+        "pipeline_version": "0.1.1",
+        "started_at": "2026-07-02T09:01:46.872585Z",
+        "status": "complete"
+      },
+      "objects": {
+        "completed_at": "2026-07-02T09:02:02.334411Z",
+        "pipeline_version": "0.1.0",
+        "status": "complete"
+      }
+    }
+  },
+  "embedding_model": {
+    "dimensions": 384,
+    "name": "sentence-transformers/all-MiniLM-L6-v2",
+    "quantization": "f32"
+  }
+}

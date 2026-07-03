@@ -1,0 +1,41 @@
+{
+  "pipeline_version": "0.1.0",
+  "extraction": "llm",
+  "nodes": [
+    {
+      "id": "d3a1c2b4-5e6f-5a7b-8c9d-0e1f2a3b4c5d",
+      "name": "Scaled Dot-Product Attention",
+      "description": "The attention function computing compatibility via dot products, scaled by 1/sqrt(d_k).",
+      "object_ids": ["b71c9d2e-4a3f-4c5d-9e8f-1a2b3c4d5e02"],
+      "confidence": 0.85
+    },
+    {
+      "id": "e4b2d3c5-6f70-5b8c-9d0e-1f2a3b4c5d6e",
+      "name": "Softmax",
+      "description": "Normalizes attention scores into a probability distribution.",
+      "object_ids": [],
+      "confidence": 0.5
+    },
+    {
+      "id": "f5c3e4d6-7081-5c9d-0e1f-2a3b4c5d6e7f",
+      "name": "Multi-Head Attention",
+      "description": "Runs several attention functions in parallel over projected subspaces.",
+      "object_ids": ["b71c9d2e-4a3f-4c5d-9e8f-1a2b3c4d5e03"],
+      "confidence": 0.85
+    }
+  ],
+  "edges": [
+    {
+      "from": "e4b2d3c5-6f70-5b8c-9d0e-1f2a3b4c5d6e",
+      "to": "d3a1c2b4-5e6f-5a7b-8c9d-0e1f2a3b4c5d",
+      "kind": "prerequisite_of",
+      "confidence": 0.8
+    },
+    {
+      "from": "f5c3e4d6-7081-5c9d-0e1f-2a3b4c5d6e7f",
+      "to": "d3a1c2b4-5e6f-5a7b-8c9d-0e1f2a3b4c5d",
+      "kind": "depends_on",
+      "confidence": 0.8
+    }
+  ]
+}

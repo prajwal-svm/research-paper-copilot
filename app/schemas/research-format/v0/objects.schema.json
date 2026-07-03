@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://research-paper-copilot.dev/schemas/research-format/v0/objects.schema.json",
+  "title": "Object model for the .research format v0",
+  "description": "Every extracted element is an object with a stable UUID. All user data anchors to object UUIDs + content hashes, never to page offsets.",
+  "$defs": {
+    "object_type": {
+      "type": "string",
+      "enum": [
+        "section",
+        "paragraph",
+        "sentence",
+        "equation",
+        "figure",
+        "table",
+        "citation",
+        "definition",
+        "algorithm",
+        "experiment",
+        "dataset",
+        "metric",
+        "claim",
+        "limitation",
+        "future_work",
+        "selection"
+      ]
+    },
+    "relationship_type": {
+      "type": "string",
+      "enum": [
+        "belongs_to",
+        "contains",
+        "references",
+        "referenced_by",
+        "depends_on",
+        "defines",
+        "cites",
+        "follows"
+      ]
+    },
+    "relationship": {
+      "type": "object",
+      "required": ["type", "target"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "$ref": "#/$defs/relationship_type" },
+        "target": { "$ref": "common.schema.json#/$defs/uuid" },
+        "confidence": { "$ref": "common.schema.json#/$defs/confidence" }
+      }
+    },
+    "object": {
+      "type": "object",
+      "required": ["id", "type", "content_hash", "confidence"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/uuid" },
+        "type": { "$ref": "#/$defs/object_type" },
+        "regions": {
+          "type": "array",
+          "description": "Bounding regions; objects spanning columns or pages have several. May be empty for objects with no visual anchor (e.g. inferred claims).",
+          "items": { "$ref": "common.schema.json#/$defs/bbox" }
+        },
+        "content": {
+          "type": "object",
+          "description": "Extracted content. `text` is always the plain-text rendering; typed extras hold richer forms.",
+          "required": ["text"],
+          "additionalProperties": false,
+          "properties": {
+            "text": { "type": "string" },
+            "latex": { "type": "string", "description": "For equations." },
+            "data": {
+              "type": "object",
+              "description": "For tables: structured rows/columns.",
+              "required": ["columns", "rows"],
+              "additionalProperties": false,
+              "properties": {
+                "columns": { "type": "array", "items": { "type": "string" } },
+                "rows": {
+                  "type": "array",
+                  "items": { "type": "array", "items": { "type": ["string", "number", "null"] } }
+                }
+              }
+            },
+            "caption": { "type": "string", "description": "For figures and tables." },
+            "image": {
+              "type": "string",
+              "description": "Bundle-relative path to an extracted image (figures)."
+            }
+          }
+        },
+        "semantic_label": {
+          "type": "string",
+          "description": "Human-meaningful label, e.g. \"Equation 1 — scaled dot-product attention\"."
+        },
+        "relationships": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/relationship" }
+        },
+        "embedding": {
+          "type": ["object", "null"],
+          "description": "Reference into embeddings.bin; null until the embedding stage runs.",
+          "required": ["index"],
+          "additionalProperties": false,
+          "properties": {
+            "index": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "content_hash": {
+          "$ref": "common.schema.json#/$defs/sha256",
+          "description": "Hash of the canonical content; user data anchors to id + this hash so re-parsing can re-attach or surface mismatches."
+        },
+        "confidence": { "$ref": "common.schema.json#/$defs/confidence" }
+      }
+    }
+  }
+}

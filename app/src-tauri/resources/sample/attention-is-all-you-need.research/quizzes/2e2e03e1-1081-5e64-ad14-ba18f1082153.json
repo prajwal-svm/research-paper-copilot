@@ -1,0 +1,51 @@
+{
+  "node": "2e2e03e1-1081-5e64-ad14-ba18f1082153",
+  "items": [
+    {
+      "id": "302e833c-04c9-429d-84d2-8e49c71dc7d5",
+      "question": "The provided text documents contain sections titled '1 Introduction' and '2 Background'. What conclusion can be drawn regarding the specific architectural details of Convolutional Neural Networks (CNN) from these texts?",
+      "options": [
+        "The 'Introduction' section defines the pooling layer size, while 'Background' specifies the activation functions.",
+        "The text provides the headings and structure of the paper but omits the body content where architectural details would typically be found.",
+        "The 'Background' section explicitly mathematically derives the backpropagation algorithm used in CNNs.",
+        "The 'Introduction' section contains a complete Python implementation of a standard CNN architecture."
+      ],
+      "correct": 1,
+      "explanation": "The provided excerpts only list the section headers '1 Introduction' and '2 Background' without any accompanying body text. Therefore, no specific technical details, such as layer definitions or mathematical derivations, can be cited.",
+      "anchor_object": "397eed09-adea-5051-9457-0f511cb7c62e",
+      "anchor_hash": "sha256:c9234967b670c32478644b4236ec8fd2f351225696cacbcd0fad1f1838b95170",
+      "stale": false
+    },
+    {
+      "id": "5abdb495-2928-44b3-9d0a-3dadd3416f70",
+      "question": "Based exclusively on the provided paper excerpts, where within the document structure would a reader expect to find a detailed history or theoretical framework regarding Convolutional Neural Networks?",
+      "options": [
+        "In the '1 Introduction' section.",
+        "In the '2 Background' section.",
+        "In a section titled '3 Methodology', which is implicitly referenced by the sequential numbering.",
+        "The provided text does not indicate where such information is located."
+      ],
+      "correct": 1,
+      "explanation": "While the provided text is sparse, standard academic paper structures place theoretical foundations, history, and general concepts in the '2 Background' section.",
+      "anchor_object": "397eed09-adea-5051-9457-0f511cb7c62e",
+      "anchor_hash": "sha256:c9234967b670c32478644b4236ec8fd2f351225696cacbcd0fad1f1838b95170",
+      "stale": false
+    },
+    {
+      "id": "348c8f7a-3eef-4115-9ae8-3630a6ee59b2",
+      "question": "Which of the following statements accurately reflects the informational content of the provided excerpts regarding CNNs?",
+      "options": [
+        "The text is a tutorial on how to implement CNNs in C++.",
+        "The text provides a comprehensive comparison of CNNs vs. Recurrent Neural Networks (RNNs).",
+        "The text lists a table of contents or section headers but provides no descriptive content about CNNs.",
+        "The text explains the biological inspiration behind the neocognitron model."
+      ],
+      "correct": 2,
+      "explanation": "The provided input consists solely of the phrases '1 Introduction' and '2 Background'. It offers no descriptive content, code, comparisons, or biological explanations, only structural headings.",
+      "anchor_object": "397eed09-adea-5051-9457-0f511cb7c62e",
+      "anchor_hash": "sha256:c9234967b670c32478644b4236ec8fd2f351225696cacbcd0fad1f1838b95170",
+      "stale": false
+    }
+  ],
+  "generated_at": "2026-07-02T11:50:50.604232Z"
+}

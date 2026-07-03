@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "StoredChatMessage",
+  "type": "object",
+  "properties": {
+    "action": {
+      "description": "The action that produced this exchange (user messages).",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "at": {
+      "type": "string"
+    },
+    "content": {
+      "type": "string"
+    },
+    "edited": {
+      "description": "True when the content was edited after the fact (derived at read).",
+      "type": "boolean"
+    },
+    "id": {
+      "description": "Stable id for edits/deletes. Absent in v1 journals — materialization\nassigns a deterministic id (UUID v5 over object + line index) so old\nmessages stay editable and edits survive re-reads.",
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid"
+    },
+    "incomplete": {
+      "description": "True when the assistant response was cut off mid-stream.",
+      "type": "boolean"
+    },
+    "role": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "role",
+    "content",
+    "at"
+  ]
+}

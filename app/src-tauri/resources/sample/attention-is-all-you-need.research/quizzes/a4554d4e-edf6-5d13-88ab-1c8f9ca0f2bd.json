@@ -1,0 +1,51 @@
+{
+  "node": "a4554d4e-edf6-5d13-88ab-1c8f9ca0f2bd",
+  "items": [
+    {
+      "id": "82db814b-a774-4022-935f-af4ad791ff9f",
+      "question": "Which of the following represents the formula for Scaled Dot-Product Attention presented in the text?",
+      "options": [
+        "softmax(QK^T)V",
+        "softmax( (QK^T) / √d_k )V",
+        "QK^T / √d_k",
+        "softmax(QV)K"
+      ],
+      "correct": 1,
+      "explanation": "The excerpt explicitly states the formula is 'Attention(Q, K, V) = softmax( QK^T / √d_k )V'.",
+      "anchor_object": "14154eed-33af-5548-b46d-7035ea188223",
+      "anchor_hash": "sha256:679b616db609c012ad32f81767b12bc39d4a34f15468f8fe5454fd22d6b7f94c",
+      "stale": false
+    },
+    {
+      "id": "69e79758-a28a-4247-98d4-c6bde86045bd",
+      "question": "In the Scaled Dot-Product Attention formula, what does the variable 'd_k' represent?",
+      "options": [
+        "The depth of the input tokens",
+        "The total number of attention heads",
+        "The dimension of the keys (and queries)",
+        "The scaling factor for the values"
+      ],
+      "correct": 2,
+      "explanation": "The notation '√d_k' is used in the formula as the scaling factor. In the context of attention mechanisms described in this paper, 'd_k' refers to the dimensionality of the keys.",
+      "anchor_object": "14154eed-33af-5548-b46d-7035ea188223",
+      "anchor_hash": "sha256:679b616db609c012ad32f81767b12bc39d4a34f15468f8fe5454fd22d6b7f94c",
+      "stale": false
+    },
+    {
+      "id": "4aad7639-d384-4534-9d76-e1e152dc7dd6",
+      "question": "What mathematical operation is applied to the matrix product QK^T before it is multiplied by V?",
+      "options": [
+        "It is scaled by √d_k and passed through a softmax",
+        "It is multiplied by the Value matrix immediately",
+        "It is normalized by a ReLU activation",
+        "It is divided by the square root of the model size"
+      ],
+      "correct": 0,
+      "explanation": "The formula shows the term 'softmax( (QK^T) / √d_k )'. This indicates the dot product is scaled by the inverse square root of d_k and then the softmax function is applied.",
+      "anchor_object": "14154eed-33af-5548-b46d-7035ea188223",
+      "anchor_hash": "sha256:679b616db609c012ad32f81767b12bc39d4a34f15468f8fe5454fd22d6b7f94c",
+      "stale": false
+    }
+  ],
+  "generated_at": "2026-07-02T11:47:29.500444Z"
+}

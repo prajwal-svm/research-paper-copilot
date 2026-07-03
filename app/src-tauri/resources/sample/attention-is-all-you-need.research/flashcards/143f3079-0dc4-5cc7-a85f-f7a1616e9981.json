@@ -1,0 +1,30 @@
+{
+  "node": "143f3079-0dc4-5cc7-a85f-f7a1616e9981",
+  "cards": [
+    {
+      "id": "b1842c60-aa32-480a-b0af-9ed07ccadb3b",
+      "front": "What is a Recurrent Neural Network (RNN)?",
+      "back": "A class of artificial neural networks designed to recognize patterns in sequences of data, such as text, genomes, handwriting, or spoken words.",
+      "anchor_object": "da0119a8-7810-5f01-8835-ec41b296904d",
+      "anchor_hash": "sha256:d21b4a64a2d8656a0fdf7ab2e89a49164ac504686cfa2a3d442e87c209286330",
+      "stale": false
+    },
+    {
+      "id": "8fde84ed-66c3-4c75-b171-b7213281e95e",
+      "front": "What distinguishes RNNs from traditional feedforward neural networks?",
+      "back": "RNNs possess an internal 'memory' (hidden state) that persists across time steps, allowing them to use previous context to process current inputs in a sequence.",
+      "anchor_object": "da0119a8-7810-5f01-8835-ec41b296904d",
+      "anchor_hash": "sha256:d21b4a64a2d8656a0fdf7ab2e89a49164ac504686cfa2a3d442e87c209286330",
+      "stale": false
+    },
+    {
+      "id": "9fe696d8-a428-4ee0-92e1-a9f47afeec57",
+      "front": "What is the primary challenge associated with training standard RNNs?",
+      "back": "The 'vanishing gradient problem,' where gradients become extremely small during backpropagation through time, making it difficult for the network to learn long-term dependencies.",
+      "anchor_object": "da0119a8-7810-5f01-8835-ec41b296904d",
+      "anchor_hash": "sha256:d21b4a64a2d8656a0fdf7ab2e89a49164ac504686cfa2a3d442e87c209286330",
+      "stale": false
+    }
+  ],
+  "generated_at": "2026-07-02T11:50:35.615757Z"
+}

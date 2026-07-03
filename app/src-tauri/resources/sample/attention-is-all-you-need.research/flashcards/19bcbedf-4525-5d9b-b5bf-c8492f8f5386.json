@@ -1,0 +1,30 @@
+{
+  "node": "19bcbedf-4525-5d9b-b5bf-c8492f8f5386",
+  "cards": [
+    {
+      "id": "e248f9cb-3ee8-4998-9a95-dbb279dfb7c6",
+      "front": "What are the three inputs used to compute the output in Scaled Dot-Product Attention?",
+      "back": "Queries ($Q$), Keys ($K$), and Values ($V$).",
+      "anchor_object": "95c69c42-11f7-5bdf-b5d8-77e3d72397b1",
+      "anchor_hash": "sha256:e9bb00d1f8142f50855d0ae1260627e5fbf96bbad33fb5b35ba6eea276349138",
+      "stale": false
+    },
+    {
+      "id": "0ee05874-1142-4f9a-8860-c037b20c0097",
+      "front": "What is the formula for Scaled Dot-Product Attention?",
+      "back": "$\\text{Attention}(Q, K, V) = \\text{softmax}\\left(\\frac{QK^T}{\\sqrt{d_k}}\\right)V$",
+      "anchor_object": "95c69c42-11f7-5bdf-b5d8-77e3d72397b1",
+      "anchor_hash": "sha256:e9bb00d1f8142f50855d0ae1260627e5fbf96bbad33fb5b35ba6eea276349138",
+      "stale": false
+    },
+    {
+      "id": "209b6356-4f04-4f25-ad13-57471b5c9e78",
+      "front": "Why is the dot-product of the query and key scaled by $1/\\sqrt{d_k}$?",
+      "back": "To counteract the effects of large dot products in high dimensions, which push the softmax into regions of extremely small gradients.",
+      "anchor_object": "95c69c42-11f7-5bdf-b5d8-77e3d72397b1",
+      "anchor_hash": "sha256:e9bb00d1f8142f50855d0ae1260627e5fbf96bbad33fb5b35ba6eea276349138",
+      "stale": false
+    }
+  ],
+  "generated_at": "2026-07-02T11:51:32.016941Z"
+}

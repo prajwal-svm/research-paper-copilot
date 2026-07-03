@@ -1,0 +1,51 @@
+{
+  "node": "143f3079-0dc4-5cc7-a85f-f7a1616e9981",
+  "items": [
+    {
+      "id": "80c0531f-8857-4f4d-9531-d742703f5621",
+      "question": "Based on the provided excerpts, what information is presented about Recurrent Neural Networks (RNN)?",
+      "options": [
+        "A detailed explanation of their mathematical architecture and training.",
+        "An abstract and a section titled '1 Introduction'.",
+        "A performance comparison with Convolutional Neural Networks.",
+        "The source code used to implement them."
+      ],
+      "correct": 1,
+      "explanation": "The provided text explicitly lists only an 'Abstract' and a '1 Introduction' section, without any other content.",
+      "anchor_object": "da0119a8-7810-5f01-8835-ec41b296904d",
+      "anchor_hash": "sha256:d21b4a64a2d8656a0fdf7ab2e89a49164ac504686cfa2a3d442e87c209286330",
+      "stale": false
+    },
+    {
+      "id": "ef04ce4d-c873-4a38-9ba8-0ab580d8a3e9",
+      "question": "What is the title of the first section listed in the provided text?",
+      "options": [
+        "Abstract",
+        "Recurrent Neural Networks",
+        "1 Introduction",
+        "Methodology"
+      ],
+      "correct": 2,
+      "explanation": "The text lists 'Abstract' first, followed by '1 Introduction'.",
+      "anchor_object": "da0119a8-7810-5f01-8835-ec41b296904d",
+      "anchor_hash": "sha256:d21b4a64a2d8656a0fdf7ab2e89a49164ac504686cfa2a3d442e87c209286330",
+      "stale": false
+    },
+    {
+      "id": "89157f86-92e6-4204-975c-c880be6e8d76",
+      "question": "Which of the following topics is covered in the provided excerpts?",
+      "options": [
+        "The specific definition of RNNs.",
+        "Abstract and Introduction sections.",
+        "The historical timeline of AI development.",
+        "Case studies of RNN failures."
+      ],
+      "correct": 1,
+      "explanation": "The provided text only includes the headers for the 'Abstract' and '1 Introduction'.",
+      "anchor_object": "da0119a8-7810-5f01-8835-ec41b296904d",
+      "anchor_hash": "sha256:d21b4a64a2d8656a0fdf7ab2e89a49164ac504686cfa2a3d442e87c209286330",
+      "stale": false
+    }
+  ],
+  "generated_at": "2026-07-02T11:50:33.659387Z"
+}

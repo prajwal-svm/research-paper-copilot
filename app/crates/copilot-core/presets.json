@@ -1,0 +1,16 @@
+[
+  {
+    "id": "zai-glm",
+    "name": "Z.ai GLM Coding Plan",
+    "protocol": "anthropic",
+    "base_url": "https://api.z.ai/api/anthropic",
+    "models": {
+      "strong": "glm-5.2",
+      "balanced": "glm-5.2",
+      "light": "glm-4.7"
+    },
+    "request_timeout_ms": 300000,
+    "supports_one_m": false,
+    "docs_url": "https://docs.z.ai/devpack/latest-model"
+  }
+]

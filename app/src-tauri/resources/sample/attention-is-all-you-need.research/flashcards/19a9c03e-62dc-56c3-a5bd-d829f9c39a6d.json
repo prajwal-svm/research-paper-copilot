@@ -1,0 +1,30 @@
+{
+  "node": "19a9c03e-62dc-56c3-a5bd-d829f9c39a6d",
+  "cards": [
+    {
+      "id": "3c32749c-13d8-4140-beaf-d92aa236c7c7",
+      "front": "What type of architecture is the Transformer based on?",
+      "back": "It relies entirely on attention mechanisms, dispensing with recurrence and convolutions.",
+      "anchor_object": "4a5443fe-cbb3-50f9-8979-d00aafe5d4aa",
+      "anchor_hash": "sha256:b450df34723662e913831fdb0f3e00b1c7be41228490ce8ce272cf6d4d2dc6ae",
+      "stale": false
+    },
+    {
+      "id": "f8b97f27-44e6-4834-b7bf-d7d76f67104e",
+      "front": "What is the primary input/output processing mechanism in the Transformer model architecture?",
+      "back": "It uses stacked self-attention and point-wise, fully connected layers for both encoder and decoder.",
+      "anchor_object": "4a5443fe-cbb3-50f9-8979-d00aafe5d4aa",
+      "anchor_hash": "sha256:b450df34723662e913831fdb0f3e00b1c7be41228490ce8ce272cf6d4d2dc6ae",
+      "stale": false
+    },
+    {
+      "id": "1aa496e4-8655-4863-85b1-d4c09bb884dc",
+      "front": "How are Encoder and Decoder stacks structured in the Transformer?",
+      "back": "They are composed of identical blocks, typically using N=6 stacked layers.",
+      "anchor_object": "4a5443fe-cbb3-50f9-8979-d00aafe5d4aa",
+      "anchor_hash": "sha256:b450df34723662e913831fdb0f3e00b1c7be41228490ce8ce272cf6d4d2dc6ae",
+      "stale": false
+    }
+  ],
+  "generated_at": "2026-07-02T11:46:55.215578Z"
+}

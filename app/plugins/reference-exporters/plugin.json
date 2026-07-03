@@ -1,0 +1,9 @@
+{
+  "name": "reference-exporters",
+  "version": "0.1.0",
+  "format_major": 0,
+  "capabilities": ["exporter"],
+  "permissions": [],
+  "entry": "plugin.wasm",
+  "description": "Anki (tab-separated deck), Obsidian (markdown vault with backlinks), and LaTeX (annotated notes) exporters — built against only the public plugin ABI."
+}

@@ -1,0 +1,34 @@
+{
+  "pipeline_version": "0.1.0",
+  "entries": [
+    {
+      "id": "c82da3f0-5b40-4d6e-af90-2b3c4d5e6f01",
+      "marker": "[13]",
+      "raw_text": "Sepp Hochreiter and Jürgen Schmidhuber. Long short-term memory. Neural computation, 9(8):1735–1780, 1997.",
+      "resolved": {
+        "source": "crossref",
+        "resolved_at": "2026-07-01T18:00:19Z",
+        "title": "Long Short-Term Memory",
+        "authors": ["Sepp Hochreiter", "Jürgen Schmidhuber"],
+        "year": 1997,
+        "venue": "Neural Computation",
+        "doi": "10.1162/neco.1997.9.8.1735"
+      },
+      "mentions": [
+        {
+          "object_id": "b71c9d2e-4a3f-4c5d-9e8f-1a2b3c4d5e01",
+          "bbox": { "page": 0, "x": 214.2, "y": 421.7, "width": 16.4, "height": 10.2 }
+        }
+      ],
+      "confidence": 0.95
+    },
+    {
+      "id": "c82da3f0-5b40-4d6e-af90-2b3c4d5e6f02",
+      "marker": "[38]",
+      "raw_text": "Unpublished manuscript, personal communication, 2016.",
+      "resolved": null,
+      "mentions": [],
+      "confidence": 0.4
+    }
+  ]
+}

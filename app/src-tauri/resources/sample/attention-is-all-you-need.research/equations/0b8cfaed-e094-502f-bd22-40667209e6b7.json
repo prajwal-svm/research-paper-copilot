@@ -1,0 +1,14 @@
+{
+  "object_id": "0b8cfaed-e094-502f-bd22-40667209e6b7",
+  "region": {
+    "page": 6,
+    "x": 162.892,
+    "y": 617.54065,
+    "width": 286.20645,
+    "height": 13.888733
+  },
+  "raw_text": "lrate = d−0.5 · min(step_num−0.5, step_num · warmup_steps−1.5) model",
+  "number": "3",
+  "latex": null,
+  "confidence": 0.9
+}

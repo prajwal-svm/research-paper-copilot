@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "KnowledgeGraph",
+  "type": "object",
+  "properties": {
+    "edges": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ConceptEdge"
+      }
+    },
+    "extraction": {
+      "description": "\"llm\" or \"heuristic\" — heuristic graphs are flagged limited in the UI.",
+      "type": "string"
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ConceptNode"
+      }
+    },
+    "pipeline_version": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "pipeline_version",
+    "extraction",
+    "nodes",
+    "edges"
+  ],
+  "$defs": {
+    "ConceptEdge": {
+      "type": "object",
+      "properties": {
+        "confidence": {
+          "type": "number",
+          "format": "float"
+        },
+        "from": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "kind": {
+          "$ref": "#/$defs/EdgeKind"
+        },
+        "to": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "from",
+        "to",
+        "kind",
+        "confidence"
+      ]
+    },
+    "ConceptNode": {
+      "type": "object",
+      "properties": {
+        "confidence": {
+          "type": "number",
+          "format": "float"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "name": {
+          "type": "string"
+        },
+        "object_ids": {
+          "description": "Paper objects that introduce/use this concept.",
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "confidence"
+      ]
+    },
+    "EdgeKind": {
+      "description": "Closed edge vocabulary (spec requirement) — anything else is rejected.",
+      "type": "string",
+      "enum": [
+        "prerequisite_of",
+        "depends_on",
+        "defined_in",
+        "used_by",
+        "extends",
+        "contradicts",
+        "cites"
+      ]
+    }
+  }
+}

@@ -1,0 +1,39 @@
+schema: spec-driven
+
+context: |
+  Project: Research Paper Copilot — an open-source IDE for understanding,
+  exploring, reproducing, and extending scientific research.
+
+  Mission: transform static scientific papers into interactive, explorable
+  knowledge. Every paper should be understandable, reproducible, and
+  extendable by anyone.
+
+  Core abstraction: Paper = Knowledge (not Paper = PDF). The PDF is one view;
+  the source of truth is the `.research` bundle (layout, semantic tree,
+  knowledge graph, embeddings, learning state, chats, implementations).
+
+  Platform: local-first desktop app (Tauri; Rust core + web frontend) for
+  macOS/Windows/Linux. Cloud sync is the priority after v1, BEFORE any web
+  app. A future web app must be identical to desktop.
+
+  Non-negotiables:
+  - Performance: budgets defined in docs/architecture/platform-and-performance.md
+  - Data structure: `.research` format is the foundation; treat it as a public,
+    versioned contract (docs/architecture/research-format.md)
+  - UX and customer satisfaction over feature count
+  - Persistent understanding (knowledge graph + memory), never stateless chat
+
+  Key docs: PRD.md (master index), docs/vision.md, docs/prd/v1..v5,
+  docs/architecture/*, docs/ux-principles.md.
+
+rules:
+  proposal:
+    - Always include explicit Non-goals
+    - Tie every capability to a user outcome, not a technology
+  specs:
+    - Every requirement must state its performance budget when user-facing
+    - Scenarios must cover failure/degraded modes (bad PDFs, no network, no API key)
+  design:
+    - Justify choices against the performance budgets and local-first constraint
+  tasks:
+    - Order tasks so a usable vertical slice ships early

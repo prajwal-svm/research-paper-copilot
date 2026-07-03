@@ -1,0 +1,277 @@
+{
+  "pipeline_version": "0.1.0",
+  "extraction": "llm",
+  "nodes": [
+    {
+      "id": "cd7bad5f-ff3a-5830-90e1-72a08d085411",
+      "name": "Sequence Transduction Models",
+      "description": "The general class of neural network architectures designed to map input sequences to output sequences, which the Transformer aims to improve upon.",
+      "object_ids": [
+        "da0119a8-7810-5f01-8835-ec41b296904d",
+        "397eed09-adea-5051-9457-0f511cb7c62e"
+      ],
+      "confidence": 0.85
+    },
+    {
+      "id": "143f3079-0dc4-5cc7-a85f-f7a1616e9981",
+      "name": "Recurrent Neural Networks (RNN)",
+      "description": "The previously dominant architecture for sequence modeling, which processes data sequentially and is being replaced by the Transformer.",
+      "object_ids": [
+        "da0119a8-7810-5f01-8835-ec41b296904d",
+        "397eed09-adea-5051-9457-0f511cb7c62e"
+      ],
+      "confidence": 0.85
+    },
+    {
+      "id": "2e2e03e1-1081-5e64-ad14-ba18f1082153",
+      "name": "Convolutional Neural Networks (CNN)",
+      "description": "An alternative architecture to RNNs for sequence modeling that allows for some parallelization but still lacks the global receptive field of self-attention.",
+      "object_ids": [
+        "397eed09-adea-5051-9457-0f511cb7c62e",
+        "0987471d-21c8-574e-941e-c2d36d00e6f1"
+      ],
+      "confidence": 0.85
+    },
+    {
+      "id": "cdd453f0-c5e1-5fe1-8e77-27aad764a7c3",
+      "name": "Encoder-Decoder Architecture",
+      "description": "The standard structural framework for sequence-to-sequence tasks consisting of an encoder that processes the input and a decoder that generates the output.",
+      "object_ids": [
+        "da0119a8-7810-5f01-8835-ec41b296904d",
+        "95c69c42-11f7-5bdf-b5d8-77e3d72397b1",
+        "4a5443fe-cbb3-50f9-8979-d00aafe5d4aa"
+      ],
+      "confidence": 0.85
+    },
+    {
+      "id": "19a9c03e-62dc-56c3-a5bd-d829f9c39a6d",
+      "name": "Transformer",
+      "description": "The proposed novel network architecture that relies entirely on attention mechanisms, dispensing with recurrence and convolution entirely.",
+      "object_ids": [
+        "da0119a8-7810-5f01-8835-ec41b296904d",
+        "95c69c42-11f7-5bdf-b5d8-77e3d72397b1",
+        "4a5443fe-cbb3-50f9-8979-d00aafe5d4aa"
+      ],
+      "confidence": 0.85
+    },
+    {
+      "id": "19bcbedf-4525-5d9b-b5bf-c8492f8f5386",
+      "name": "Self-Attention",
+      "description": "An attention mechanism where the queries, keys, and values all originate from the same sequence (the input or previous decoder layer), allowing the model to relate different positions within a sequence.",
+      "object_ids": [
+        "95c69c42-11f7-5bdf-b5d8-77e3d72397b1",
+        "50e7dd5d-9f9c-52a5-9674-826cc1208565",
+        "14154eed-33af-5548-b46d-7035ea188223"
+      ],
+      "confidence": 0.85
+    },
+    {
+      "id": "a4554d4e-edf6-5d13-88ab-1c8f9ca0f2bd",
+      "name": "Scaled Dot-Product Attention",
+      "description": "The specific attention function used in the Transformer that computes the dot product of the query and keys, scales by the inverse square root of the dimension, and applies softmax.",
+      "object_ids": [
+        "50e7dd5d-9f9c-52a5-9674-826cc1208565",
+        "14154eed-33af-5548-b46d-7035ea188223",
+        "44c92032-6c87-5a39-b1cd-cd875c863e92"
+      ],
+      "confidence": 0.85
+    },
+    {
+      "id": "50876a36-8325-5e64-af27-64d01984e82b",
+      "name": "Multi-Head Attention",
+      "description": "A mechanism that allows the model to jointly attend to information from different representation subspaces at different positions by running multiple attention functions in parallel.",
+      "object_ids": [
+        "f893d6d5-aa04-550b-8c3d-d1b497675f41",
+        "4cbef5fc-e97b-5e5b-b556-5d82e4283f3e"
+      ],
+      "confidence": 0.85
+    },
+    {
+      "id": "f2758d04-2279-514d-b287-99a5e5a7ab4c",
+      "name": "Position-wise Feed-Forward Networks",
+      "description": "Fully connected feed-forward networks applied to each position separately and identically, consisting of two linear transformations with a ReLU activation in between.",
+      "object_ids": [
+        "897b19a1-5312-5b5e-9d7a-e8c4cc8e3182",
+        "024f4e64-24b3-5994-87b7-1c70b09dc2a1"
+      ],
+      "confidence": 0.85
+    },
+    {
+      "id": "98c8f3c5-3838-593f-a3c3-f6f51b2900a7",
+      "name": "Positional Encoding",
+      "description": "Information injected into the model to compensate for the lack of recurrence and convolution, using sine and cosine functions of different frequencies to indicate token position.",
+      "object_ids": [
+        "edb38348-9a37-5e6f-9215-cfe0b9ac92d2"
+      ],
+      "confidence": 0.85
+    },
+    {
+      "id": "b919f6da-3731-5b6b-9d2f-1e95c574c067",
+      "name": "Residual Connections",
+      "description": "Connections employed around each of the sub-layers in the encoder and decoder stacks to facilitate the training of deep networks.",
+      "object_ids": [
+        "9c10f229-5da0-55e8-9f33-833afb74f446"
+      ],
+      "confidence": 0.85
+    },
+    {
+      "id": "98d15339-553e-566b-a904-d227e607af26",
+      "name": "Layer Normalization",
+      "description": "A technique used to stabilize the hidden state dynamics in deep networks, applied after the residual connections in the Transformer.",
+      "object_ids": [
+        "9c10f229-5da0-55e8-9f33-833afb74f446"
+      ],
+      "confidence": 0.85
+    },
+    {
+      "id": "7e87adf7-d018-51de-8f94-1e5b49502f72",
+      "name": "Encoder-Decoder Attention",
+      "description": "The attention layer in the decoder where the queries come from the previous decoder layer and the keys and values come from the output of the encoder stack.",
+      "object_ids": [
+        "6a3c468f-0530-54e0-a019-ebb3b18fc9f9"
+      ],
+      "confidence": 0.85
+    },
+    {
+      "id": "a661f1f2-e630-511a-b0ff-7517ef9b9ea0",
+      "name": "Additive Attention",
+      "description": "An alternative attention function that computes compatibility using a feed-forward network with a single hidden layer, referenced as a comparison to dot-product attention.",
+      "object_ids": [
+        "14154eed-33af-5548-b46d-7035ea188223"
+      ],
+      "confidence": 0.85
+    },
+    {
+      "id": "204a8d75-dd4c-5f8c-af8e-f2f4fc51984e",
+      "name": "Label Smoothing",
+      "description": "A regularization technique used during training where the target probability is discounted and distributed to other tokens to improve model calibration and performance.",
+      "object_ids": [
+        "a424741a-e88f-5085-83ad-496599ad337f"
+      ],
+      "confidence": 0.85
+    },
+    {
+      "id": "40831b41-4438-5b57-9fbf-dcc1847a2fa2",
+      "name": "Adam Optimizer",
+      "description": "The optimization algorithm used for training the Transformer, with specific settings for beta parameters and a custom learning rate schedule.",
+      "object_ids": [
+        "216ad057-0230-5a77-8696-4c6863bf2aba"
+      ],
+      "confidence": 0.85
+    },
+    {
+      "id": "0199cd2f-3b29-5f06-9ded-25089a92690d",
+      "name": "BLEU Score",
+      "description": "The standard metric for evaluating machine translation quality, used to demonstrate the Transformer's state-of-the-art performance.",
+      "object_ids": [
+        "93ccbbd4-c223-527c-bbc4-74844e1de90c",
+        "aeea2bcf-1c4b-5c73-83b5-e0d40df19fe6"
+      ],
+      "confidence": 0.85
+    }
+  ],
+  "edges": [
+    {
+      "from": "cd7bad5f-ff3a-5830-90e1-72a08d085411",
+      "to": "19a9c03e-62dc-56c3-a5bd-d829f9c39a6d",
+      "kind": "extends",
+      "confidence": 0.8
+    },
+    {
+      "from": "143f3079-0dc4-5cc7-a85f-f7a1616e9981",
+      "to": "cd7bad5f-ff3a-5830-90e1-72a08d085411",
+      "kind": "used_by",
+      "confidence": 0.8
+    },
+    {
+      "from": "19a9c03e-62dc-56c3-a5bd-d829f9c39a6d",
+      "to": "143f3079-0dc4-5cc7-a85f-f7a1616e9981",
+      "kind": "contradicts",
+      "confidence": 0.8
+    },
+    {
+      "from": "2e2e03e1-1081-5e64-ad14-ba18f1082153",
+      "to": "cd7bad5f-ff3a-5830-90e1-72a08d085411",
+      "kind": "used_by",
+      "confidence": 0.8
+    },
+    {
+      "from": "19a9c03e-62dc-56c3-a5bd-d829f9c39a6d",
+      "to": "2e2e03e1-1081-5e64-ad14-ba18f1082153",
+      "kind": "contradicts",
+      "confidence": 0.8
+    },
+    {
+      "from": "cdd453f0-c5e1-5fe1-8e77-27aad764a7c3",
+      "to": "19a9c03e-62dc-56c3-a5bd-d829f9c39a6d",
+      "kind": "defined_in",
+      "confidence": 0.8
+    },
+    {
+      "from": "19bcbedf-4525-5d9b-b5bf-c8492f8f5386",
+      "to": "19a9c03e-62dc-56c3-a5bd-d829f9c39a6d",
+      "kind": "depends_on",
+      "confidence": 0.8
+    },
+    {
+      "from": "50876a36-8325-5e64-af27-64d01984e82b",
+      "to": "19bcbedf-4525-5d9b-b5bf-c8492f8f5386",
+      "kind": "extends",
+      "confidence": 0.8
+    },
+    {
+      "from": "a4554d4e-edf6-5d13-88ab-1c8f9ca0f2bd",
+      "to": "19bcbedf-4525-5d9b-b5bf-c8492f8f5386",
+      "kind": "defined_in",
+      "confidence": 0.8
+    },
+    {
+      "from": "f2758d04-2279-514d-b287-99a5e5a7ab4c",
+      "to": "19a9c03e-62dc-56c3-a5bd-d829f9c39a6d",
+      "kind": "depends_on",
+      "confidence": 0.8
+    },
+    {
+      "from": "98c8f3c5-3838-593f-a3c3-f6f51b2900a7",
+      "to": "19a9c03e-62dc-56c3-a5bd-d829f9c39a6d",
+      "kind": "depends_on",
+      "confidence": 0.8
+    },
+    {
+      "from": "b919f6da-3731-5b6b-9d2f-1e95c574c067",
+      "to": "19a9c03e-62dc-56c3-a5bd-d829f9c39a6d",
+      "kind": "used_by",
+      "confidence": 0.8
+    },
+    {
+      "from": "98d15339-553e-566b-a904-d227e607af26",
+      "to": "19a9c03e-62dc-56c3-a5bd-d829f9c39a6d",
+      "kind": "used_by",
+      "confidence": 0.8
+    },
+    {
+      "from": "40831b41-4438-5b57-9fbf-dcc1847a2fa2",
+      "to": "19a9c03e-62dc-56c3-a5bd-d829f9c39a6d",
+      "kind": "used_by",
+      "confidence": 0.8
+    },
+    {
+      "from": "204a8d75-dd4c-5f8c-af8e-f2f4fc51984e",
+      "to": "19a9c03e-62dc-56c3-a5bd-d829f9c39a6d",
+      "kind": "used_by",
+      "confidence": 0.8
+    },
+    {
+      "from": "0199cd2f-3b29-5f06-9ded-25089a92690d",
+      "to": "19a9c03e-62dc-56c3-a5bd-d829f9c39a6d",
+      "kind": "cites",
+      "confidence": 0.8
+    },
+    {
+      "from": "a661f1f2-e630-511a-b0ff-7517ef9b9ea0",
+      "to": "a4554d4e-edf6-5d13-88ab-1c8f9ca0f2bd",
+      "kind": "contradicts",
+      "confidence": 0.8
+    }
+  ]
+}

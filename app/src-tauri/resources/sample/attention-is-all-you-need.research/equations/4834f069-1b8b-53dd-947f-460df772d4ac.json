@@ -1,0 +1,13 @@
+{
+  "object_id": "4834f069-1b8b-53dd-947f-460df772d4ac",
+  "region": {
+    "page": 5,
+    "x": 225.694,
+    "y": 336.38666,
+    "width": 160.60349,
+    "height": 29.742828
+  },
+  "raw_text": "PE(pos,2i) = sin(pos/100002i/dmodel) PE(pos,2i+1) = cos(pos/100002i/dmodel)",
+  "latex": null,
+  "confidence": 0.65
+}

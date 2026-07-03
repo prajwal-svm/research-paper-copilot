@@ -1,0 +1,230 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SemanticTreeDocument",
+  "type": "object",
+  "properties": {
+    "objects": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Object"
+      }
+    },
+    "pipeline_version": {
+      "type": "string"
+    },
+    "tree": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/TreeNode"
+      }
+    }
+  },
+  "required": [
+    "pipeline_version",
+    "objects",
+    "tree"
+  ],
+  "$defs": {
+    "BBox": {
+      "type": "object",
+      "properties": {
+        "height": {
+          "type": "number",
+          "format": "float"
+        },
+        "page": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "width": {
+          "type": "number",
+          "format": "float"
+        },
+        "x": {
+          "type": "number",
+          "format": "float"
+        },
+        "y": {
+          "type": "number",
+          "format": "float"
+        }
+      },
+      "required": [
+        "page",
+        "x",
+        "y",
+        "width",
+        "height"
+      ]
+    },
+    "Content": {
+      "type": "object",
+      "properties": {
+        "caption": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "latex": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
+      ]
+    },
+    "EmbeddingRef": {
+      "type": "object",
+      "properties": {
+        "index": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "index"
+      ]
+    },
+    "Object": {
+      "type": "object",
+      "properties": {
+        "confidence": {
+          "type": "number",
+          "format": "float"
+        },
+        "content": {
+          "$ref": "#/$defs/Content"
+        },
+        "content_hash": {
+          "type": "string"
+        },
+        "embedding": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EmbeddingRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "regions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/BBox"
+          }
+        },
+        "relationships": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Relationship"
+          }
+        },
+        "semantic_label": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "$ref": "#/$defs/ObjectType"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "content",
+        "content_hash",
+        "confidence"
+      ]
+    },
+    "ObjectType": {
+      "type": "string",
+      "enum": [
+        "section",
+        "paragraph",
+        "sentence",
+        "equation",
+        "figure",
+        "table",
+        "citation",
+        "definition",
+        "algorithm",
+        "experiment",
+        "dataset",
+        "metric",
+        "claim",
+        "limitation",
+        "future_work",
+        "selection"
+      ]
+    },
+    "Relationship": {
+      "type": "object",
+      "properties": {
+        "confidence": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "float"
+        },
+        "target": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "type": {
+          "$ref": "#/$defs/RelationshipType"
+        }
+      },
+      "required": [
+        "type",
+        "target"
+      ]
+    },
+    "RelationshipType": {
+      "type": "string",
+      "enum": [
+        "belongs_to",
+        "contains",
+        "references",
+        "referenced_by",
+        "depends_on",
+        "defines",
+        "cites",
+        "follows"
+      ]
+    },
+    "TreeNode": {
+      "type": "object",
+      "properties": {
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TreeNode"
+          }
+        },
+        "object": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "object"
+      ]
+    }
+  }
+}

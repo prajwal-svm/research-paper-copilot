@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://research-paper-copilot.dev/schemas/research-format/v0/knowledge_graph.schema.json",
+  "title": "knowledge_graph.json — per-paper concept graph for the .research format",
+  "description": "Derived, regenerable (pipeline stage 5). Nodes are concepts linked to the paper objects that introduce/use them; edges use a closed vocabulary. User corrections live in user data (notes/graph_overrides.jsonl), never here.",
+  "type": "object",
+  "required": ["pipeline_version", "extraction", "nodes", "edges"],
+  "additionalProperties": false,
+  "properties": {
+    "pipeline_version": { "$ref": "common.schema.json#/$defs/semver" },
+    "extraction": {
+      "type": "string",
+      "description": "How the graph was produced; heuristic graphs are flagged limited in the UI.",
+      "enum": ["llm", "heuristic"]
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "confidence"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "$ref": "common.schema.json#/$defs/uuid",
+            "description": "Deterministic (UUID v5 over paper + normalized name) so learner data anchored to concepts survives re-extraction."
+          },
+          "name": { "type": "string", "minLength": 1 },
+          "description": { "type": "string" },
+          "object_ids": {
+            "type": "array",
+            "description": "Paper objects (semantic_tree.json) that introduce/use this concept.",
+            "items": { "$ref": "common.schema.json#/$defs/uuid" }
+          },
+          "confidence": { "$ref": "common.schema.json#/$defs/confidence" }
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["from", "to", "kind", "confidence"],
+        "additionalProperties": false,
+        "properties": {
+          "from": { "$ref": "common.schema.json#/$defs/uuid" },
+          "to": { "$ref": "common.schema.json#/$defs/uuid" },
+          "kind": {
+            "type": "string",
+            "description": "Closed vocabulary. Direction: 'A prerequisite_of B' = learn A before B; 'A depends_on B' = A builds on B.",
+            "enum": [
+              "prerequisite_of",
+              "depends_on",
+              "defined_in",
+              "used_by",
+              "extends",
+              "contradicts",
+              "cites"
+            ]
+          },
+          "confidence": { "$ref": "common.schema.json#/$defs/confidence" }
+        }
+      }
+    }
+  }
+}

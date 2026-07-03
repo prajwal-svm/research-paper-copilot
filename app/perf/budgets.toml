@@ -1,0 +1,202 @@
+# Performance budgets — product requirements, not aspirations.
+# Source of truth: docs/architecture/platform-and-performance.md
+#
+# Each budget is asserted in CI by crates/copilot-core/tests/perf_budgets.rs
+# (release mode). `status = "enforced"` budgets fail the build on regression;
+# `status = "pending"` budgets are declared here ahead of their feature and
+# MUST flip to enforced in the task that ships the feature (tracked in
+# openspec/changes/add-v1-foundation). A budget id with no registered
+# benchmark but status = "enforced" fails CI — the table cannot silently
+# drift from the suite.
+
+[reference_machine]
+description = "4-core laptop, 8 GB RAM, integrated GPU"
+# CI runners are not the reference machine; measured times are compared to
+# budget_ms * slack_factor (override with PERF_CI_SLACK env var).
+ci_slack_factor = 3.0
+
+# ---- Whole-app budgets (pending their features) ----
+
+[[budget]]
+id = "cold_start_library"
+description = "Cold app start → interactive library (200 papers)"
+budget_ms = 1500
+status = "pending" # task 3.1
+
+[[budget]]
+id = "open_paper_first_page"
+description = "Open an already-ingested paper → first page rendered"
+budget_ms = 500
+status = "pending" # task 4.1
+
+[[budget]]
+id = "scroll_frame_time"
+description = "Page render while scrolling (60 fps)"
+budget_ms = 16
+status = "pending" # task 4.1
+
+[[budget]]
+id = "object_panel_cached"
+description = "Click object → interaction panel visible (cached data)"
+budget_ms = 100
+status = "pending" # task 6.1
+
+[[budget]]
+id = "hover_highlight"
+description = "Object hover highlight"
+budget_ms = 50
+status = "pending" # task 4.2
+
+[[budget]]
+id = "citation_hover_card_cached"
+description = "Citation hover card (cached)"
+budget_ms = 150
+status = "pending" # task 6.3
+
+[[budget]]
+id = "semantic_search_in_paper"
+description = "Local semantic search within a paper"
+budget_ms = 50
+status = "pending" # task 4.4
+
+[[budget]]
+id = "ingestion_10_page_paper"
+description = "Ingestion, 10-page paper, stages 1–4 (no LLM enrichment)"
+budget_ms = 30000
+status = "pending" # embeddings stage needs the model in CI; stages 1–3 slice enforced below
+
+# ---- Core-layer budgets (enforced now) ----
+
+[[budget]]
+id = "ingestion_10_page_stages_1_3"
+description = "Core: full pipeline stages 1–3 on a synthetic 10-page paper (slice of ingestion 30 s; embeddings excluded)"
+budget_ms = 10000
+status = "enforced"
+
+[[budget]]
+id = "embedding_store_search"
+description = "Core: brute-force cosine search over 1000×384 mmap'd vectors (slice of semantic-search 50 ms)"
+budget_ms = 10
+status = "enforced"
+
+[[budget]]
+id = "bundle_open_metadata"
+description = "Core: open bundle + read metadata (slice of open-paper 500 ms)"
+budget_ms = 50
+status = "enforced"
+
+[[budget]]
+id = "journal_append"
+description = "Core: append one journal entry (slice of note-save 100 ms)"
+budget_ms = 10
+status = "enforced"
+
+[[budget]]
+id = "journal_read_1k_entries"
+description = "Core: load a 1000-message chat journal (slice of panel-open 100 ms)"
+budget_ms = 50
+status = "enforced"
+
+[[budget]]
+id = "hash_10mb"
+description = "Core: content-hash a 10 MB PDF (slice of ingestion 30 s)"
+budget_ms = 500
+status = "enforced"
+
+[[budget]]
+id = "graph_neighborhood_query"
+description = "v2: 2-hop concept-graph neighborhood from the SQLite index (2k nodes, ~8k edges)"
+budget_ms = 5
+status = "enforced"
+
+[[budget]]
+id = "entity_linking"
+description = "v2: link a free-form query to concept nodes (2k-node graph, name match)"
+budget_ms = 50
+status = "enforced"
+
+[[budget]]
+id = "concept_search_200_papers"
+description = "v2: library-wide concept search over a 200-paper registry (offline fold + match)"
+budget_ms = 150
+status = "enforced"
+
+[[budget]]
+id = "dashboard_open_figures"
+description = "v2 UI: paper dashboard figures ready on open (two local file reads)"
+budget_ms = 500
+status = "pending" # UI budget — measured manually like scroll_frame_time
+
+[[budget]]
+id = "lesson_open_skeleton"
+description = "v2 UI: reading-mode lesson shows content or skeleton after navigation"
+budget_ms = 300
+status = "pending" # UI budget — cached lessons are one file read; skeleton is immediate
+
+[[budget]]
+id = "registry_analytics_200_papers"
+description = "v4: concept lineage + co-occurrence matrix over a 200-paper registry (offline)"
+budget_ms = 150
+status = "enforced"
+
+[[budget]]
+id = "implementation_get_cached"
+description = "v3: open a cached implementation (code + meta + output, three file reads)"
+budget_ms = 50
+status = "enforced"
+
+[[budget]]
+id = "sandbox_cold_start"
+description = "v3: container create → first output (spike-measured 0.35 s warm; needs a runtime)"
+budget_ms = 2000
+status = "pending" # measured in the ignored real_runtime_smoke / repro_corpus gates
+
+[[budget]]
+id = "experiment_chart_render"
+description = "v3 UI: metric chart over 50 runs renders within a frame budget"
+budget_ms = 100
+status = "pending" # UI budget — chart derives from in-memory run records
+
+[[budget]]
+id = "repo_browser_file_open"
+description = "v3 UI: open a source file in the repo browser (local read + highlight)"
+budget_ms = 150
+status = "pending" # UI budget — offline file read from the library cache
+
+[[budget]]
+id = "gap_computation_200_papers"
+description = "v4: structural gap computation over a 200-paper registry (excludes LLM narration)"
+budget_ms = 5000
+status = "enforced"
+
+[[budget]]
+id = "review_open"
+description = "v4 UI: open a review document (two local file reads + render)"
+budget_ms = 300
+status = "pending" # UI budget
+
+[[budget]]
+id = "sync_manifest_build_50_papers"
+description = "sync: build the library manifest (walk + hash) for a 50-paper library"
+budget_ms = 500
+status = "enforced"
+
+[[budget]]
+id = "sync_no_change_cycle"
+description = "sync: incremental cycle with nothing changed (fake remote) uploads nothing"
+budget_ms = 1000
+status = "enforced"
+
+# ---- v5: registry + web parity ----
+
+[[budget]]
+id = "registry_pull_layer"
+description = "Pull-on-import: verify + merge a 200-entry/20-file community layer"
+budget_ms = 400
+status = "enforced"
+
+[[budget]]
+id = "web_bundle_open"
+description = "Web bundle open: wasm core instantiation + full bundle round trip (module precompiled)"
+budget_ms = 1000
+status = "enforced"

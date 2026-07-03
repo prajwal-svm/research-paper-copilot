@@ -1,0 +1,51 @@
+{
+  "node": "19a9c03e-62dc-56c3-a5bd-d829f9c39a6d",
+  "items": [
+    {
+      "id": "e0921fcd-3b48-47d4-bdb2-491bd8fca33a",
+      "question": "What is the primary function of the 'Transformer' model architecture described in the figure?",
+      "options": [
+        "To map word vectors directly to output probabilities without intermediate processing",
+        "To rely entirely on recurrent and convolutional neural networks for sequence modeling",
+        "To handle input and output sequences using attention and feed-forward networks without recurrence or convolution",
+        "To compress sequences into a single fixed-size vector before processing"
+      ],
+      "correct": 2,
+      "explanation": "The title 'Transformer' and the context of the excerpt (referencing the well-known architecture associated with Figure 1 in the literature) define the model by its use of attention and lack of recurrence or convolutions.",
+      "anchor_object": "4a5443fe-cbb3-50f9-8979-d00aafe5d4aa",
+      "anchor_hash": "sha256:b450df34723662e913831fdb0f3e00b1c7be41228490ce8ce272cf6d4d2dc6ae",
+      "stale": false
+    },
+    {
+      "id": "172b2a1c-0110-4c27-8cab-52c9b17673f8",
+      "question": "Based on the label 'Figure 1: The Transformer - model architecture', what structural implication is standard for this diagram?",
+      "options": [
+        "It depicts a linear stack of layers where input flows only left-to-right",
+        "It consists of an Encoder stack on the left and a Decoder stack on the right",
+        "It shows a flat structure with no distinct sub-components",
+        "It represents a purely unsupervised clustering mechanism"
+      ],
+      "correct": 1,
+      "explanation": "The referenced Figure 1 from the seminal paper describes the overall architecture, which is structurally composed of an Encoder and a Decoder.",
+      "anchor_object": "4a5443fe-cbb3-50f9-8979-d00aafe5d4aa",
+      "anchor_hash": "sha256:b450df34723662e913831fdb0f3e00b1c7be41228490ce8ce272cf6d4d2dc6ae",
+      "stale": false
+    },
+    {
+      "id": "061a5541-7752-4a62-832e-7e1187ecfcc4",
+      "question": "Which component is NOT a structural part of the 'Transformer' architecture shown in Figure 1?",
+      "options": [
+        "Multi-Head Attention",
+        "Position-wise Feed-Forward Networks",
+        "Recurrent Layers (LSTMs or GRUs)",
+        "Embeddings and Softmax"
+      ],
+      "correct": 2,
+      "explanation": "The defining characteristic of the Transformer architecture depicted in Figure 1 is the complete removal of recurrent layers (like LSTMs or GRUs) in favor of attention mechanisms.",
+      "anchor_object": "4a5443fe-cbb3-50f9-8979-d00aafe5d4aa",
+      "anchor_hash": "sha256:b450df34723662e913831fdb0f3e00b1c7be41228490ce8ce272cf6d4d2dc6ae",
+      "stale": false
+    }
+  ],
+  "generated_at": "2026-07-02T11:46:50.70577Z"
+}

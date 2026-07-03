@@ -1,0 +1,30 @@
+{
+  "node": "cdd453f0-c5e1-5fe1-8e77-27aad764a7c3",
+  "cards": [
+    {
+      "id": "7ae7d48e-63e4-4554-8a8d-4b7bfc76fa85",
+      "front": "What is the primary function of the Encoder in the Transformer architecture?",
+      "back": "The Encoder maps an input sequence of symbol representations (x) to a sequence of continuous representations z.",
+      "anchor_object": "da0119a8-7810-5f01-8835-ec41b296904d",
+      "anchor_hash": "sha256:d21b4a64a2d8656a0fdf7ab2e89a49164ac504686cfa2a3d442e87c209286330",
+      "stale": false
+    },
+    {
+      "id": "c2f3a1e0-c0ca-4ac9-aa3a-6fc2c0b53933",
+      "front": "What is the role of the Decoder in the Transformer architecture?",
+      "back": "The Decoder generates an output sequence (y) one element at a time, taking the continuous representations z from the Encoder as input.",
+      "anchor_object": "da0119a8-7810-5f01-8835-ec41b296904d",
+      "anchor_hash": "sha256:d21b4a64a2d8656a0fdf7ab2e89a49164ac504686cfa2a3d442e87c209286330",
+      "stale": false
+    },
+    {
+      "id": "ee670812-0807-42aa-b400-6c94fd4500ea",
+      "front": "How does the Encoder-Decoder architecture process sequential data?",
+      "back": "It utilizes stacked self-attention and point-wise, fully connected layers for both the encoder and decoder, operating on the sequence as a whole rather than sequentially.",
+      "anchor_object": "da0119a8-7810-5f01-8835-ec41b296904d",
+      "anchor_hash": "sha256:d21b4a64a2d8656a0fdf7ab2e89a49164ac504686cfa2a3d442e87c209286330",
+      "stale": false
+    }
+  ],
+  "generated_at": "2026-07-02T11:51:11.856788Z"
+}

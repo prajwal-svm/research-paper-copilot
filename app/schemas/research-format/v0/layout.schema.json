@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://research-paper-copilot.dev/schemas/research-format/v0/layout.schema.json",
+  "title": "layout.json — page geometry and reading order for the .research format v0",
+  "type": "object",
+  "required": ["pipeline_version", "pages"],
+  "additionalProperties": false,
+  "properties": {
+    "pipeline_version": { "$ref": "common.schema.json#/$defs/semver" },
+    "pages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["index", "width", "height", "blocks"],
+        "additionalProperties": false,
+        "properties": {
+          "index": { "type": "integer", "minimum": 0 },
+          "width": { "type": "number", "exclusiveMinimum": 0, "description": "Page width in PDF points." },
+          "height": { "type": "number", "exclusiveMinimum": 0 },
+          "rotation": { "type": "integer", "enum": [0, 90, 180, 270], "default": 0 },
+          "is_scanned": {
+            "type": "boolean",
+            "description": "True when the page has no extractable text layer (image-only)."
+          },
+          "blocks": {
+            "type": "array",
+            "description": "Visual blocks in reading order (array order IS the reading order within the page).",
+            "items": {
+              "type": "object",
+              "required": ["id", "kind", "bbox", "confidence"],
+              "additionalProperties": false,
+              "properties": {
+                "id": { "$ref": "common.schema.json#/$defs/uuid" },
+                "kind": {
+                  "type": "string",
+                  "enum": ["text", "heading", "equation", "figure", "table", "caption", "header", "footer", "footnote", "reference_entry", "unknown"]
+                },
+                "bbox": { "$ref": "common.schema.json#/$defs/bbox" },
+                "column": { "type": "integer", "minimum": 0, "description": "Column index for multi-column layouts." },
+                "text": { "type": "string", "description": "Raw text content when the block has a text layer." },
+                "lines": {
+                  "type": "array",
+                  "description": "Per-line spans within the block (used for table grids and fine-grained highlighting).",
+                  "items": {
+                    "type": "object",
+                    "required": ["text", "bbox"],
+                    "additionalProperties": false,
+                    "properties": {
+                      "text": { "type": "string" },
+                      "bbox": { "$ref": "common.schema.json#/$defs/bbox" }
+                    }
+                  }
+                },
+                "confidence": { "$ref": "common.schema.json#/$defs/confidence" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

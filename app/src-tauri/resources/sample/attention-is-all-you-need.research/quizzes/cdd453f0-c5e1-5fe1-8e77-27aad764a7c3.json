@@ -1,0 +1,51 @@
+{
+  "node": "cdd453f0-c5e1-5fe1-8e77-27aad764a7c3",
+  "items": [
+    {
+      "id": "5310efa6-0206-4585-9161-ead5b18865fa",
+      "question": "Based on the provided text, what is the primary architectural framework being presented?",
+      "options": [
+        "The Encoder-Decoder Architecture",
+        "The Convolutional Neural Network",
+        "The Recurrent Neural Network",
+        "The Generative Adversarial Network"
+      ],
+      "correct": 0,
+      "explanation": "The text explicitly lists '3 Model Architecture' immediately following the abstract and introduces 'Figure 1: The Transformer - model architecture.' In the context of sequence-to-sequence models described by such paper structures, this framework is classically defined as the Encoder-Decoder architecture.",
+      "anchor_object": "da0119a8-7810-5f01-8835-ec41b296904d",
+      "anchor_hash": "sha256:d21b4a64a2d8656a0fdf7ab2e89a49164ac504686cfa2a3d442e87c209286330",
+      "stale": false
+    },
+    {
+      "id": "874d5ba2-4766-41f2-a456-578e05427978",
+      "question": "What is the formal title given to the specific model architecture depicted in Figure 1?",
+      "options": [
+        "The Seq2Seq Model",
+        "The Attention Mechanism",
+        "The Transformer",
+        "The BERT Model"
+      ],
+      "correct": 2,
+      "explanation": "The caption for Figure 1 in the text explicitly states: 'Figure 1: The Transformer - model architecture.'",
+      "anchor_object": "da0119a8-7810-5f01-8835-ec41b296904d",
+      "anchor_hash": "sha256:d21b4a64a2d8656a0fdf7ab2e89a49164ac504686cfa2a3d442e87c209286330",
+      "stale": false
+    },
+    {
+      "id": "71d8f3d9-24eb-4b9c-b393-83aa2a5c066c",
+      "question": "Which section of the paper is dedicated to explaining the structural design of the model?",
+      "options": [
+        "Abstract",
+        "3 Model Architecture",
+        "Figure 1",
+        "The Transformer"
+      ],
+      "correct": 1,
+      "explanation": "The text lists the heading '3 Model Architecture', indicating that this section specifically details the design and composition of the model.",
+      "anchor_object": "da0119a8-7810-5f01-8835-ec41b296904d",
+      "anchor_hash": "sha256:d21b4a64a2d8656a0fdf7ab2e89a49164ac504686cfa2a3d442e87c209286330",
+      "stale": false
+    }
+  ],
+  "generated_at": "2026-07-02T11:51:08.864584Z"
+}

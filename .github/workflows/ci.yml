@@ -1,0 +1,143 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 6 * * 1" # weekly golden-corpus run
+
+env:
+  CARGO_TERM_COLOR: always
+
+# All code lives under app/; docs and specs live at the repo root.
+defaults:
+  run:
+    working-directory: app
+
+jobs:
+  lint-and-test:
+    name: Lint & test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file \
+            libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: app
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Typecheck & build frontend
+        run: npm run build
+
+      - name: Validate .research format schemas
+        run: npm run validate:schemas
+
+      - name: Fetch PDFium
+        shell: bash
+        run: ./scripts/fetch-pdfium.sh
+
+      - name: Rust format
+        run: cargo fmt --all --check
+
+      - name: Rust lint
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Rust tests
+        run: cargo test --workspace
+
+      # First run on a new OS writes a render-golden candidate and fails;
+      # download the artifact, eyeball it, commit it as the golden.
+      - name: Upload render-golden candidates
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: render-golden-candidates-${{ matrix.os }}
+          path: app/crates/copilot-core/tests/goldens/*.candidate.png
+          if-no-files-found: ignore
+
+      - name: Performance budgets (release, blocker)
+        run: cargo test --release -p copilot-core --test perf_budgets -- --nocapture
+
+  golden-corpus:
+    name: Golden corpus (≥95% usable)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: app
+      - name: Fetch PDFium
+        run: ./scripts/fetch-pdfium.sh
+      - name: Run corpus regression
+        run: cargo test -p copilot-core --test golden_corpus -- --ignored --nocapture
+
+  build:
+    name: Build app (${{ matrix.os }})
+    needs: lint-and-test
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file \
+            libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: app
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build Tauri app
+        run: npm run tauri build
+
+      - name: Upload bundles
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundles-${{ matrix.os }}
+          path: |
+            app/target/release/bundle/
+          if-no-files-found: warn

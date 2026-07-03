@@ -1,0 +1,51 @@
+{
+  "node": "19bcbedf-4525-5d9b-b5bf-c8492f8f5386",
+  "items": [
+    {
+      "id": "0bd0d3e5-7f5b-49c6-aa28-6e70fdcbea92",
+      "question": "According to the text, why is a scaling factor applied to the dot products in Scaled Dot-Product Attention?",
+      "options": [
+        "To prevent the dot products from becoming too small.",
+        "To counteract the effect of large dot products pushing the Softmax into regions with extremely small gradients.",
+        "To reduce the computational complexity of the matrix multiplication.",
+        "To normalize the values of the keys (K) and queries (Q)."
+      ],
+      "correct": 1,
+      "explanation": "The text states: 'We suspect that for large values of dk, the dot products grow large in magnitude, pushing the Softmax function into regions where it has extremely small gradients. To counteract this effect, we scale the dot products by 1/sqrt(dk).'",
+      "anchor_object": "95c69c42-11f7-5bdf-b5d8-77e3d72397b1",
+      "anchor_hash": "sha256:e9bb00d1f8142f50855d0ae1260627e5fbf96bbad33fb5b35ba6eea276349138",
+      "stale": false
+    },
+    {
+      "id": "c98828d4-8dac-4b14-a615-f903e9237c79",
+      "question": "Which of the following mathematical formulas is explicitly presented in the text to describe the function of attention?",
+      "options": [
+        "(QK)V / sqrt(dk)",
+        "softmax((QK)V / sqrt(dk))",
+        "softmax(QK^T / sqrt(dk))V",
+        "Attention(Q, K, V) = softmax(QK^T / sqrt(dk))V"
+      ],
+      "correct": 3,
+      "explanation": "The excerpt explicitly defines the function with the formula: Attention(Q, K, V) = softmax(QK^T / sqrt(dk))V.",
+      "anchor_object": "95c69c42-11f7-5bdf-b5d8-77e3d72397b1",
+      "anchor_hash": "sha256:e9bb00d1f8142f50855d0ae1260627e5fbf96bbad33fb5b35ba6eea276349138",
+      "stale": false
+    },
+    {
+      "id": "1fe6697f-af71-4aec-96f0-c710b13fe042",
+      "question": "What are the three inputs listed for the attention function in the provided text?",
+      "options": [
+        "Queries, Keys, and Values",
+        "Vectors, Weights, and Biases",
+        "Matrices, Softmax, and Scaling factors",
+        "Input, Output, and Hidden States"
+      ],
+      "correct": 0,
+      "explanation": "The text describes the input as consisting of queries and keys of dimension dk, and values of dimension dv, and refers to the function as Attention(Q, K, V).",
+      "anchor_object": "95c69c42-11f7-5bdf-b5d8-77e3d72397b1",
+      "anchor_hash": "sha256:e9bb00d1f8142f50855d0ae1260627e5fbf96bbad33fb5b35ba6eea276349138",
+      "stale": false
+    }
+  ],
+  "generated_at": "2026-07-02T11:51:28.831068Z"
+}

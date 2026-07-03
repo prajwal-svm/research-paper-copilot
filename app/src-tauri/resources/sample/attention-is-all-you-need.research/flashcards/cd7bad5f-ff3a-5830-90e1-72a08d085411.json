@@ -1,0 +1,30 @@
+{
+  "node": "cd7bad5f-ff3a-5830-90e1-72a08d085411",
+  "cards": [
+    {
+      "id": "886ae9d4-84f5-4bbf-b827-978e462a121e",
+      "front": "What is the primary goal of Sequence Transduction Models?",
+      "back": "To map an input sequence of symbols to an output sequence of symbols, often with different lengths or domains (e.g., Machine Translation).",
+      "anchor_object": "da0119a8-7810-5f01-8835-ec41b296904d",
+      "anchor_hash": "sha256:d21b4a64a2d8656a0fdf7ab2e89a49164ac504686cfa2a3d442e87c209286330",
+      "stale": false
+    },
+    {
+      "id": "adca0077-89c4-4b25-bc42-7b80a77d4e67",
+      "front": "What defines the general structure of these models according to the introduction?",
+      "back": "They typically consist of an encoder that processes the input sequence and a decoder that generates the output sequence.",
+      "anchor_object": "da0119a8-7810-5f01-8835-ec41b296904d",
+      "anchor_hash": "sha256:d21b4a64a2d8656a0fdf7ab2e89a49164ac504686cfa2a3d442e87c209286330",
+      "stale": false
+    },
+    {
+      "id": "7e37e9fb-73ae-455c-8e99-7fac29f51d3d",
+      "front": "What problem is this paper addressing regarding sequence transduction?",
+      "back": "The paper aims to improve computational efficiency and performance on long sequences, often by reducing sequential computation and enabling parallelization.",
+      "anchor_object": "da0119a8-7810-5f01-8835-ec41b296904d",
+      "anchor_hash": "sha256:d21b4a64a2d8656a0fdf7ab2e89a49164ac504686cfa2a3d442e87c209286330",
+      "stale": false
+    }
+  ],
+  "generated_at": "2026-07-02T11:50:16.774481Z"
+}

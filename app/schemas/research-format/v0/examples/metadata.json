@@ -1,0 +1,63 @@
+{
+  "format_version": "0.1.0",
+  "created_at": "2026-07-01T18:00:00Z",
+  "updated_at": "2026-07-01T18:04:12Z",
+  "paper": {
+    "title": "Attention Is All You Need",
+    "authors": ["Ashish Vaswani", "Noam Shazeer", "Niki Parmar", "Jakob Uszkoreit", "Llion Jones", "Aidan N. Gomez", "Lukasz Kaiser", "Illia Polosukhin"],
+    "abstract": "The dominant sequence transduction models are based on complex recurrent or convolutional neural networks...",
+    "published_at": "2017-06-12",
+    "identifiers": {
+      "arxiv_id": "1706.03762",
+      "doi": "10.48550/arXiv.1706.03762"
+    }
+  },
+  "source": {
+    "imported_from": "arxiv",
+    "imported_at": "2026-07-01T18:00:00Z",
+    "url": "https://arxiv.org/abs/1706.03762"
+  },
+  "content_hashes": {
+    "original.pdf": "sha256:aa8bd2e4bc6c0fe7b7e0b1e2d3c4b5a69788695a4b3c2d1e0f9e8d7c6b5a4d3c",
+    "layout.json": "sha256:1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6",
+    "semantic_tree.json": "sha256:2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7"
+  },
+  "pipeline": {
+    "stages": {
+      "layout": {
+        "pipeline_version": "0.1.0",
+        "status": "complete",
+        "started_at": "2026-07-01T18:00:01Z",
+        "completed_at": "2026-07-01T18:00:04Z"
+      },
+      "objects": {
+        "pipeline_version": "0.1.0",
+        "status": "complete",
+        "started_at": "2026-07-01T18:00:04Z",
+        "completed_at": "2026-07-01T18:00:09Z"
+      },
+      "enrichment_parsing": {
+        "pipeline_version": "0.1.0",
+        "status": "degraded",
+        "started_at": "2026-07-01T18:00:09Z",
+        "completed_at": "2026-07-01T18:00:21Z",
+        "failure_reason": "2 of 24 equations could not be converted to LaTeX with confidence; they are flagged in the reader."
+      },
+      "embeddings": {
+        "pipeline_version": "0.1.0",
+        "status": "complete",
+        "started_at": "2026-07-01T18:00:21Z",
+        "completed_at": "2026-07-01T18:00:28Z"
+      },
+      "llm_enrichment": {
+        "pipeline_version": "0.1.0",
+        "status": "pending"
+      }
+    }
+  },
+  "embedding_model": {
+    "name": "example-multilingual-minilm",
+    "dimensions": 384,
+    "quantization": "f32"
+  }
+}

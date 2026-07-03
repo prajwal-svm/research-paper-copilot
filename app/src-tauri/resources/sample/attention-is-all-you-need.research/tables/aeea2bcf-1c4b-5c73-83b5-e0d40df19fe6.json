@@ -1,0 +1,13 @@
+{
+  "object_id": "aeea2bcf-1c4b-5c73-83b5-e0d40df19fe6",
+  "region": {
+    "page": 7,
+    "x": 107.691,
+    "y": 71.95056,
+    "width": 396.3121,
+    "height": 168.3523
+  },
+  "caption": "Table 2: The Transformer achieves better BLEU scores than previous state-of-the-art models on the English-to-German and English-to-French newstest2014 tests at a fraction of the training cost. Training Cost (FLOPs) BLEU Model EN-DE EN-FR EN-DE EN-FR 23.75 ByteNet [18] 1.0 · 1020 Deep-Att + PosUnk [39] 39.2 2.3 · 1019 1.4 · 1020 24.6 GNMT + RL [38] 39.92 9.6 · 1018 1.5 · 1020 25.16 ConvS2S [9] 2.0 · 1019 1.2 · 1020 26.03 MoE [32] 8.0 · 1020 Deep-Att + PosUnk Ensemble [39] 1.8 · 1020 1.1 · 1021 26.30 GNMT + RL Ensemble [38] 7.7 · 1019 1.2 · 1021 26.36 ConvS2S Ensemble [9] 3.3 · 1018 Transformer (base model) 27.3 2.3 · 1019 28.4 Transformer (big)",
+  "data": null,
+  "confidence": 0.3
+}

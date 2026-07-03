@@ -1,0 +1,30 @@
+{
+  "node": "2e2e03e1-1081-5e64-ad14-ba18f1082153",
+  "cards": [
+    {
+      "id": "2c7024f6-f757-4064-8b69-d1d253025e75",
+      "front": "What are the three key architectural stages or components typically described in the 'Background' section of CNN papers?",
+      "back": "The 'Background' section typically outlines the hierarchical structure: (1) **Convolutional Layers** for feature extraction, (2) **Activation Functions** (like ReLU) for non-linearity, and (3) **Pooling Layers** (like Max Pooling) for spatial invariance and dimensionality reduction.",
+      "anchor_object": "397eed09-adea-5051-9457-0f511cb7c62e",
+      "anchor_hash": "sha256:c9234967b670c32478644b4236ec8fd2f351225696cacbcd0fad1f1838b95170",
+      "stale": false
+    },
+    {
+      "id": "57c5982a-8990-447b-b226-cd782b298d36",
+      "front": "According to CNN literature, how does the 'Introduction' frame the significance of Convolutional Neural Networks compared to traditional methods?",
+      "back": "The 'Introduction' typically contrasts CNNs with traditional machine learning by highlighting their ability to **automatically learn hierarchical feature representations** directly from raw data (like pixels), eliminating the need for manual feature engineering.",
+      "anchor_object": "397eed09-adea-5051-9457-0f511cb7c62e",
+      "anchor_hash": "sha256:c9234967b670c32478644b4236ec8fd2f351225696cacbcd0fad1f1838b95170",
+      "stale": false
+    },
+    {
+      "id": "3f03062e-bfa2-49bb-a49d-ef394d5f44bd",
+      "front": "What is the specific purpose of the 'Background' section in CNN papers as opposed to the 'Introduction'?",
+      "back": "While the 'Introduction' motivates the problem and impact, the 'Background' provides the **technical foundation**, explaining the mathematical mechanisms (like weight sharing, local receptive fields, and backpropagation) that allow the network to function.",
+      "anchor_object": "397eed09-adea-5051-9457-0f511cb7c62e",
+      "anchor_hash": "sha256:c9234967b670c32478644b4236ec8fd2f351225696cacbcd0fad1f1838b95170",
+      "stale": false
+    }
+  ],
+  "generated_at": "2026-07-02T11:50:55.136354Z"
+}

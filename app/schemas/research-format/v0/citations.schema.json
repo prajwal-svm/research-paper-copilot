@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://research-paper-copilot.dev/schemas/research-format/v0/citations.schema.json",
+  "title": "citations.json — parsed bibliography and in-text citation mentions for the .research format v0",
+  "type": "object",
+  "required": ["pipeline_version", "entries"],
+  "additionalProperties": false,
+  "properties": {
+    "pipeline_version": { "$ref": "common.schema.json#/$defs/semver" },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "raw_text", "confidence"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "common.schema.json#/$defs/uuid" },
+          "marker": {
+            "type": "string",
+            "description": "In-text marker as it appears in the paper, e.g. \"[13]\" or \"(Vaswani et al., 2017)\"."
+          },
+          "raw_text": {
+            "type": "string",
+            "description": "Verbatim bibliography entry. Always kept — shown when resolution fails."
+          },
+          "resolved": {
+            "type": ["object", "null"],
+            "description": "External metadata; null when unresolved (offline or no match). Resolution failure is normal, never an error state.",
+            "required": ["source"],
+            "additionalProperties": false,
+            "properties": {
+              "source": { "type": "string", "enum": ["arxiv", "crossref", "manual"] },
+              "resolved_at": { "$ref": "common.schema.json#/$defs/timestamp" },
+              "title": { "type": "string" },
+              "authors": { "type": "array", "items": { "type": "string" } },
+              "year": { "type": "integer" },
+              "venue": { "type": "string" },
+              "arxiv_id": { "type": "string" },
+              "doi": { "type": "string" },
+              "url": { "type": "string", "format": "uri" },
+              "abstract": { "type": "string" }
+            }
+          },
+          "mentions": {
+            "type": "array",
+            "description": "Where this work is cited in the paper; anchors hover cards and \"why cited here\".",
+            "items": {
+              "type": "object",
+              "required": ["object_id"],
+              "additionalProperties": false,
+              "properties": {
+                "object_id": {
+                  "$ref": "common.schema.json#/$defs/uuid",
+                  "description": "The citation object in semantic_tree.json at this location."
+                },
+                "bbox": { "$ref": "common.schema.json#/$defs/bbox" }
+              }
+            }
+          },
+          "confidence": { "$ref": "common.schema.json#/$defs/confidence" }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://research-paper-copilot.dev/schemas/research-format/v0/common.schema.json",
+  "title": "Common definitions for the .research format v0",
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "semver": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-[0-9A-Za-z-.]+)?$"
+    },
+    "sha256": {
+      "type": "string",
+      "description": "Content hash, prefixed with its algorithm.",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "confidence": {
+      "type": "number",
+      "description": "Extraction confidence, 0 (certainly wrong) to 1 (certain).",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "bbox": {
+      "type": "object",
+      "description": "Region on a page. Coordinates in PDF points, origin at the top-left of the page.",
+      "required": ["page", "x", "y", "width", "height"],
+      "additionalProperties": false,
+      "properties": {
+        "page": { "type": "integer", "minimum": 0, "description": "Zero-based page index." },
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "width": { "type": "number", "minimum": 0 },
+        "height": { "type": "number", "minimum": 0 }
+      }
+    },
+    "stage_record": {
+      "type": "object",
+      "description": "Provenance record for one pipeline stage.",
+      "required": ["pipeline_version", "status"],
+      "additionalProperties": false,
+      "properties": {
+        "pipeline_version": { "$ref": "#/$defs/semver" },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "running", "complete", "degraded", "failed"]
+        },
+        "started_at": { "$ref": "#/$defs/timestamp" },
+        "completed_at": { "$ref": "#/$defs/timestamp" },
+        "failure_reason": {
+          "type": "string",
+          "description": "Plain-language explanation shown to the user when status is degraded or failed."
+        }
+      }
+    }
+  }
+}

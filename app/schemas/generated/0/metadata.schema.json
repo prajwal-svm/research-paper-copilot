@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Metadata",
+  "type": "object",
+  "properties": {
+    "content_hashes": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "embedding_model": true,
+    "format_version": {
+      "type": "string"
+    },
+    "paper": {
+      "$ref": "#/$defs/Paper"
+    },
+    "pipeline": {
+      "$ref": "#/$defs/Pipeline"
+    },
+    "source": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Source"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "updated_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "additionalProperties": true,
+  "required": [
+    "format_version",
+    "created_at",
+    "paper",
+    "content_hashes",
+    "pipeline"
+  ],
+  "$defs": {
+    "Paper": {
+      "type": "object",
+      "properties": {
+        "abstract": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "authors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true,
+      "required": [
+        "title"
+      ]
+    },
+    "Pipeline": {
+      "type": "object",
+      "properties": {
+        "stages": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true,
+      "required": [
+        "stages"
+      ]
+    },
+    "Source": {
+      "type": "object",
+      "properties": {
+        "imported_at": {
+          "type": "string"
+        },
+        "imported_from": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true,
+      "required": [
+        "imported_from",
+        "imported_at"
+      ]
+    }
+  }
+}

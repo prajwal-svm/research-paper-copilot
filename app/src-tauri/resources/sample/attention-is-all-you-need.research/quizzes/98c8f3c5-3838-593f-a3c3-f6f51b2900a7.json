@@ -1,0 +1,51 @@
+{
+  "node": "98c8f3c5-3838-593f-a3c3-f6f51b2900a7",
+  "items": [
+    {
+      "id": "c980df52-dea4-4975-8259-f2dc55f7f938",
+      "question": "Why is positional encoding necessary in the model architecture described?",
+      "options": [
+        "To reduce the computational complexity of the attention mechanism.",
+        "Because the model contains no recurrence and no convolution, effectively making the sequence orderless.",
+        "To allow the model to process variable-length sequences more efficiently than RNNs.",
+        "To prevent the vanishing gradient problem commonly found in deep networks."
+      ],
+      "correct": 1,
+      "explanation": "The paper states: 'Since our model contains no recurrence and no convolution, in order for the model to make use of the order of the sequence, we must inject some information about the relative or absolute position of the tokens in the sequence.'",
+      "anchor_object": "edb38348-9a37-5e6f-9215-cfe0b9ac92d2",
+      "anchor_hash": "sha256:7cdb568f32e8ef05031656c2b1bf5db1f07c9893e420ac2e7c92591538b38fbb",
+      "stale": false
+    },
+    {
+      "id": "6b276d97-9e23-4829-88c0-c164ee81ccbd",
+      "question": "Which dimensions are the positional encodings added to?",
+      "options": [
+        "The output of the decoder.",
+        "The input embeddings and the output of the decoder stack.",
+        "The input embeddings and the output of the encoder stack.",
+        "The input of the encoder stack and the input of the decoder stack."
+      ],
+      "correct": 2,
+      "explanation": "The text explicitly states: 'We add these positional encodings to the input embeddings at the bottoms of the encoder and decoder stacks.'",
+      "anchor_object": "edb38348-9a37-5e6f-9215-cfe0b9ac92d2",
+      "anchor_hash": "sha256:7cdb568f32e8ef05031656c2b1bf5db1f07c9893e420ac2e7c92591538b38fbb",
+      "stale": false
+    },
+    {
+      "id": "500cb534-9af0-45b3-80dd-1768add14d80",
+      "question": "What hypothesis regarding the model's ability to learn was tested regarding positional encodings?",
+      "options": [
+        "Whether the model could learn to rely entirely on learned positional embeddings.",
+        "Whether the model could function effectively without any positional information.",
+        "Whether fixed sinusoidal encodings could improve generalization compared to learned ones.",
+        "Whether using binary encoding for positions would outperform sinusoidal encoding."
+      ],
+      "correct": 0,
+      "explanation": "The text notes: 'We also experimented with using learned positional embeddings instead, and found that the two versions produced nearly identical results.'",
+      "anchor_object": "edb38348-9a37-5e6f-9215-cfe0b9ac92d2",
+      "anchor_hash": "sha256:7cdb568f32e8ef05031656c2b1bf5db1f07c9893e420ac2e7c92591538b38fbb",
+      "stale": false
+    }
+  ],
+  "generated_at": "2026-07-02T11:48:04.102236Z"
+}

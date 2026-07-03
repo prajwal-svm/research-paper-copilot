@@ -1,0 +1,62 @@
+[package]
+name = "copilot-core"
+description = "Research Paper Copilot core: .research format, ingestion pipeline, search"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+sha2.workspace = true
+uuid.workspace = true
+time.workspace = true
+pdfium-render = { version = "0.9.2", features = ["thread_safe"], optional = true }
+image = { version = "0.25.10", default-features = false, features = ["png"], optional = true }
+ureq = { version = "2", features = ["json"], optional = true }
+candle-core = { version = "0.9", optional = true }
+candle-nn = { version = "0.9", optional = true }
+candle-transformers = { version = "0.9", optional = true }
+tokenizers = { version = "0.23.1", optional = true }
+hf-hub = { version = "0.5.0", optional = true }
+memmap2 = { version = "0.9.11", optional = true }
+keyring = { version = "4.1.2", features = ["apple-native-keyring-store"], optional = true }
+rusqlite = { version = "0.37", features = ["bundled"], optional = true }
+argon2 = "0.5.3"
+hmac = "0.12"
+chacha20poly1305 = "0.10"
+schemars.workspace = true
+jsonschema = { version = "0.46.9", default-features = false }
+ed25519-dalek = { version = "2.2.0", features = ["rand_core"] }
+tar = "0.4.46"
+wasmtime = { version = "45.0.3", default-features = false, features = ["runtime", "cranelift", "wat"], optional = true }
+
+[features]
+default = ["native"]
+# Everything that needs an OS the browser does not provide: subprocesses
+# (sandbox/docker), native HTTP (ureq), the OS keychain, pdfium, the ML
+# stack, sqlite, and the wasmtime plugin host. The wasm32-wasip1 build
+# excludes these at compile time (spec: platform-parity) — WASI still
+# provides std::fs, so the whole bundle/journal/sync-merge layer runs
+# unchanged in browsers behind an OPFS-backed WASI shim.
+native = [
+  "dep:pdfium-render",
+  "dep:image",
+  "dep:ureq",
+  "dep:candle-core",
+  "dep:candle-nn",
+  "dep:candle-transformers",
+  "dep:tokenizers",
+  "dep:hf-hub",
+  "dep:memmap2",
+  "dep:keyring",
+  "dep:rusqlite",
+  "dep:wasmtime",
+]
+
+[dev-dependencies]
+tempfile = "3"
+toml = "0.8"
+wasmtime-wasi = "45"
+wat = "1.252.0"

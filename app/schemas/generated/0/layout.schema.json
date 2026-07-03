@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LayoutDocument",
+  "type": "object",
+  "properties": {
+    "pages": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/LayoutPage"
+      }
+    },
+    "pipeline_version": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "pipeline_version",
+    "pages"
+  ],
+  "$defs": {
+    "BBox": {
+      "type": "object",
+      "properties": {
+        "height": {
+          "type": "number",
+          "format": "float"
+        },
+        "page": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "width": {
+          "type": "number",
+          "format": "float"
+        },
+        "x": {
+          "type": "number",
+          "format": "float"
+        },
+        "y": {
+          "type": "number",
+          "format": "float"
+        }
+      },
+      "required": [
+        "page",
+        "x",
+        "y",
+        "width",
+        "height"
+      ]
+    },
+    "BlockKind": {
+      "type": "string",
+      "enum": [
+        "text",
+        "heading",
+        "equation",
+        "figure",
+        "table",
+        "caption",
+        "header",
+        "footer",
+        "footnote",
+        "reference_entry",
+        "unknown"
+      ]
+    },
+    "LayoutBlock": {
+      "type": "object",
+      "properties": {
+        "bbox": {
+          "$ref": "#/$defs/BBox"
+        },
+        "column": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "confidence": {
+          "type": "number",
+          "format": "float"
+        },
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "kind": {
+          "$ref": "#/$defs/BlockKind"
+        },
+        "lines": {
+          "description": "Per-line spans (table grids, fine-grained highlighting).",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/LineSpan"
+          }
+        },
+        "text": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "bbox",
+        "confidence"
+      ]
+    },
+    "LayoutPage": {
+      "type": "object",
+      "properties": {
+        "blocks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/LayoutBlock"
+          }
+        },
+        "height": {
+          "type": "number",
+          "format": "float"
+        },
+        "index": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "is_scanned": {
+          "type": "boolean"
+        },
+        "rotation": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "width": {
+          "type": "number",
+          "format": "float"
+        }
+      },
+      "required": [
+        "index",
+        "width",
+        "height",
+        "rotation",
+        "is_scanned",
+        "blocks"
+      ]
+    },
+    "LineSpan": {
+      "type": "object",
+      "properties": {
+        "bbox": {
+          "$ref": "#/$defs/BBox"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "bbox"
+      ]
+    }
+  }
+}

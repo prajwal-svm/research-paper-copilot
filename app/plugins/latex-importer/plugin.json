@@ -1,0 +1,9 @@
+{
+  "name": "latex-importer",
+  "version": "0.1.0",
+  "format_major": 0,
+  "capabilities": ["importer"],
+  "permissions": [],
+  "entry": "plugin.wasm",
+  "description": "Imports LaTeX source as a .research bundle: title, abstract, authors, and sections — page-geometry features degrade explicitly (cover page instead of the typeset PDF)."
+}

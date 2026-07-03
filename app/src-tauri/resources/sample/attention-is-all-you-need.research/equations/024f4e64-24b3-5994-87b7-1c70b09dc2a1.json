@@ -1,0 +1,14 @@
+{
+  "object_id": "024f4e64-24b3-5994-87b7-1c70b09dc2a1",
+  "region": {
+    "page": 4,
+    "x": 226.901,
+    "y": 568.46204,
+    "width": 157.69705,
+    "height": 10.318909
+  },
+  "raw_text": "FFN(x) = max(0, xW1 + b1)W2 + b2",
+  "number": "2",
+  "latex": null,
+  "confidence": 0.9
+}

@@ -1,0 +1,30 @@
+{
+  "node": "a4554d4e-edf6-5d13-88ab-1c8f9ca0f2bd",
+  "cards": [
+    {
+      "id": "0c45f033-6b6b-46a8-a146-462aa1d89934",
+      "front": "What is the formula for Scaled Dot-Product Attention?",
+      "back": "softmax( (QK^T) / √d_k ) V",
+      "anchor_object": "14154eed-33af-5548-b46d-7035ea188223",
+      "anchor_hash": "sha256:679b616db609c012ad32f81767b12bc39d4a34f15468f8fe5454fd22d6b7f94c",
+      "stale": false
+    },
+    {
+      "id": "4a865c13-1862-40d3-b5c7-a0c4bd3eea6d",
+      "front": "Why is the dot-product of queries and keys scaled by 1/√d_k?",
+      "back": "To counteract the effect of large dot product values in high dimensions, which pushes the softmax into regions with extremely small gradients.",
+      "anchor_object": "14154eed-33af-5548-b46d-7035ea188223",
+      "anchor_hash": "sha256:679b616db609c012ad32f81767b12bc39d4a34f15468f8fe5454fd22d6b7f94c",
+      "stale": false
+    },
+    {
+      "id": "b667f9ea-8c99-4efd-82be-d3ff7e1bf00a",
+      "front": "What are the inputs to the Scaled Dot-Product Attention function?",
+      "back": "Matrices Q (Queries), K (Keys), and V (Values).",
+      "anchor_object": "14154eed-33af-5548-b46d-7035ea188223",
+      "anchor_hash": "sha256:679b616db609c012ad32f81767b12bc39d4a34f15468f8fe5454fd22d6b7f94c",
+      "stale": false
+    }
+  ],
+  "generated_at": "2026-07-02T11:47:32.317155Z"
+}

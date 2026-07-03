@@ -1,0 +1,13 @@
+{
+  "object_id": "d2177a27-5814-5d18-94dd-2f21a3324f47",
+  "region": {
+    "page": 9,
+    "x": 107.691,
+    "y": 71.95056,
+    "width": 396.30405,
+    "height": 163.30133
+  },
+  "caption": "Table 4: The Transformer generalizes well to English constituency parsing (Results are on Section 23 of WSJ) WSJ 23 F1 Parser 88.3 90.4 90.4 WSJ only, discriminative 91.7 WSJ only, discriminative 91.3 91.3 91.3 semi-supervised 92.1 semi-supervised 92.1 semi-supervised 92.7 multi-task 93.0 generative 93.3",
+  "data": null,
+  "confidence": 0.3
+}

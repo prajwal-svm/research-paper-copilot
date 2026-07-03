@@ -1,0 +1,14 @@
+{
+  "object_id": "44c92032-6c87-5a39-b1cd-cd875c863e92",
+  "region": {
+    "page": 3,
+    "x": 219.97,
+    "y": 465.57718,
+    "width": 171.69623,
+    "height": 25.486725
+  },
+  "raw_text": "QKT Attention(Q, K, V) = softmax( √d )V k",
+  "number": "1",
+  "latex": null,
+  "confidence": 0.9
+}

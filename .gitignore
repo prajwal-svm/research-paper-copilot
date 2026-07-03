@@ -1,0 +1,28 @@
+# --- Node / frontend ---
+node_modules/
+dist/
+dist-web/
+*.tsbuildinfo
+
+# --- Rust (workspace root and the standalone plugin crates) ---
+target/
+
+# --- Tauri ---
+src-tauri/gen/
+
+# --- Vendored binaries fetched by scripts (scripts/fetch-pdfium.sh) ---
+vendor/
+
+# --- Reference registry server: local data & tokens (never commit tokens) ---
+registry-data/
+tokens.json
+
+# --- Test / tooling artifacts ---
+.playwright-mcp/
+*.log
+
+# --- Local editor / agent state (project skills & commands ARE committed) ---
+.claude/settings.local.json
+
+# --- OS ---
+.DS_Store

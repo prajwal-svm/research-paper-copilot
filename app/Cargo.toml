@@ -1,0 +1,27 @@
+[workspace]
+resolver = "2"
+members = ["crates/copilot-core", "crates/registry-server", "src-tauri"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/research-paper-copilot/research-paper-copilot"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+sha2 = "0.10"
+uuid = { version = "1", features = ["v4", "v5", "serde"] }
+time = { version = "0.3", features = ["formatting", "parsing"] }
+schemars = { version = "1", features = ["uuid1"] }
+
+# Keep backtraces useful but stop debug artifacts from eating the disk
+# (full debuginfo made target/ exceed 20GB with this dependency tree).
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.release]
+lto = true
+codegen-units = 1

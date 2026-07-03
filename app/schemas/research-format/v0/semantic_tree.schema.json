@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://research-paper-copilot.dev/schemas/research-format/v0/semantic_tree.schema.json",
+  "title": "semantic_tree.json — extracted objects and document hierarchy for the .research format v0",
+  "description": "Identity is separated from hierarchy: `objects` is the flat authoritative list of extracted objects; `tree` nests object ids to express the section → paragraph → sentence structure.",
+  "type": "object",
+  "required": ["pipeline_version", "objects", "tree"],
+  "additionalProperties": false,
+  "properties": {
+    "pipeline_version": { "$ref": "common.schema.json#/$defs/semver" },
+    "objects": {
+      "type": "array",
+      "items": { "$ref": "objects.schema.json#/$defs/object" }
+    },
+    "tree": {
+      "type": "array",
+      "description": "Top-level nodes (title, abstract, sections) in reading order.",
+      "items": { "$ref": "#/$defs/node" }
+    }
+  },
+  "$defs": {
+    "node": {
+      "type": "object",
+      "required": ["object"],
+      "additionalProperties": false,
+      "properties": {
+        "object": { "$ref": "common.schema.json#/$defs/uuid" },
+        "children": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/node" }
+        }
+      }
+    }
+  }
+}
