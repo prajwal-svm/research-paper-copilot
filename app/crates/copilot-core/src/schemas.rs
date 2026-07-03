@@ -10,7 +10,6 @@ use std::path::Path;
 
 use schemars::{schema_for, Schema};
 
-
 /// Every schema'd bundle file kind: (file kind name, schema).
 /// Kind names match the bundle file they describe.
 pub fn schema_set() -> Vec<(&'static str, Schema)> {

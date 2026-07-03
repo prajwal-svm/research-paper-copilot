@@ -647,12 +647,10 @@ impl RegistryClient {
             .request("GET", &format!("v1/papers/{canonical_key}/layers"))
             .call()
             .map_err(|e| match e {
-                ureq::Error::Status(404, _) => {
-                    RegistryHttpError::Rejected {
-                        status: 404,
-                        body: String::new(),
-                    }
-                }
+                ureq::Error::Status(404, _) => RegistryHttpError::Rejected {
+                    status: 404,
+                    body: String::new(),
+                },
                 ureq::Error::Status(_, r) => Self::rejected(r),
                 other => RegistryHttpError::Unreachable(other.to_string()),
             });
