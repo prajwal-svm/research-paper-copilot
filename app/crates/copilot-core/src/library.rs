@@ -154,10 +154,8 @@ impl Library {
                     break;
                 }
                 "failed" | "degraded" => status = IngestionStatus::Degraded,
-                "pending" | "running" => {
-                    if status == IngestionStatus::Ready {
-                        status = IngestionStatus::Processing;
-                    }
+                "pending" | "running" if status == IngestionStatus::Ready => {
+                    status = IngestionStatus::Processing;
                 }
                 _ => {}
             }

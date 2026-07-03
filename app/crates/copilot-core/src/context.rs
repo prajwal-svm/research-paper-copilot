@@ -278,7 +278,7 @@ pub fn link_query(graph: &crate::concepts::KnowledgeGraph, query: &str) -> Vec<U
             (!name.is_empty() && normalized_query.contains(&name)).then_some((name.len(), node.id))
         })
         .collect();
-    matches.sort_by(|a, b| b.0.cmp(&a.0));
+    matches.sort_by_key(|m| std::cmp::Reverse(m.0));
     matches.into_iter().map(|(_, id)| id).collect()
 }
 

@@ -185,7 +185,7 @@ impl LearnerModel {
             .into_iter()
             .map(|(concept, state)| state.into_mastery(concept, now))
             .collect();
-        mastery.sort_by(|a, b| a.concept.cmp(&b.concept));
+        mastery.sort_by_key(|a| a.concept);
 
         let mut preferences = HashMap::new();
         for event in preference_events {

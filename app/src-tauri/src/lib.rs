@@ -2479,7 +2479,7 @@ fn review_regenerate(
             (members.len() >= 2).then(|| (concept.name.clone(), members))
         })
         .collect();
-    shared.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
+    shared.sort_by_key(|s| std::cmp::Reverse(s.1.len()));
     shared.truncate(12);
     // Builds-on relations: chronological order within each shared concept.
     let mut relations: Vec<(String, String, String)> = Vec::new();
