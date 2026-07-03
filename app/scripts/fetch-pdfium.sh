@@ -34,5 +34,10 @@ fi
 echo "fetching $url"
 mkdir -p "$DEST"
 curl -fsSL "$url" | tar -xz -C "$DEST"
+# Windows packages ship the runtime DLL in bin/, but consumers (layout.rs
+# and the release bundler) look in lib/ on every OS — unify.
+if [ -f "$DEST/bin/pdfium.dll" ]; then
+  cp "$DEST/bin/pdfium.dll" "$DEST/lib/"
+fi
 echo "pdfium installed to $DEST"
 ls "$DEST/lib"

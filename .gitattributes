@@ -1,0 +1,10 @@
+# Force LF on checkout everywhere: byte-exact comparisons (generated JSON
+# Schemas, golden files) must not vary by OS checkout settings.
+* text=auto eol=lf
+
+# Binaries — never converted.
+*.png binary
+*.pdf binary
+*.wasm binary
+*.bin binary
+*.tgz binary
