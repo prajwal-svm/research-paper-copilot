@@ -87,7 +87,7 @@ fn main() {
         let embedder = Embedder::load().unwrap();
         println!("stage 4 model load: ({:?})", t.elapsed());
         let t = std::time::Instant::now();
-        let count = run_embeddings_stage(&bundle, &embedder).unwrap();
+        let count = run_embeddings_stage(&bundle, &embedder, |_, _| {}).unwrap();
         println!("stage 4 embeddings: {count} vectors ({:?})", t.elapsed());
 
         // Semantic search smoke test (the spec scenario).

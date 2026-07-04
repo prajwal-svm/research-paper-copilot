@@ -49,8 +49,14 @@ pub struct Manifest {
 
 /// Directory names (library-level or in-bundle) that never sync.
 const EXCLUDED_DIRS: [&str; 4] = ["repos", "sync_state", "telemetry", ".trash"];
-/// File names that never sync (heavy, re-derivable caches).
-const EXCLUDED_FILES: [&str; 2] = ["embeddings.bin", "graph.db"];
+/// File names that never sync: heavy re-derivable caches, plus SQLite WAL
+/// sidecars (transient mid-write state; the main db file is the artifact).
+const EXCLUDED_FILES: [&str; 4] = [
+    "embeddings.bin",
+    "graph.db",
+    "workspace.db-wal",
+    "workspace.db-shm",
+];
 
 fn classify(relative: &Path) -> Option<Layer> {
     let first = relative.components().next()?.as_os_str().to_string_lossy();
@@ -106,6 +112,8 @@ fn classify(relative: &Path) -> Option<Layer> {
         "presence.jsonl",
         "threads",
         "papers",
+        // The workspace store (notes/canvases/chat threads) is user data.
+        "workspace.db",
     ];
     if library_user.contains(&first.as_ref()) {
         return Some(Layer::User);

@@ -4,18 +4,26 @@ import { Excalidraw, convertToExcalidrawElements } from "@excalidraw/excalidraw"
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 import type { ExcalidrawElementSkeleton } from "@excalidraw/excalidraw/data/transform";
 import "@excalidraw/excalidraw/index.css";
-
-// Self-hosted Excalidraw fonts (copied to public/excalidraw-assets at build
-// time) — without this the runtime fetches fonts from a CDN, which breaks
-// the app's offline-first posture. CJK fallback (Xiaolai) is excluded for
-// size; those glyphs fall back to system fonts.
-declare global {
-  interface Window {
-    EXCALIDRAW_ASSET_PATH?: string | string[];
-  }
-}
-window.EXCALIDRAW_ASSET_PATH = "/excalidraw-assets/";
-import { ExternalLinkIcon, RefreshCwIcon } from "lucide-react";
+// Shared canvas helpers (also sets the self-hosted asset path on import).
+import { canvasSummary, dataUrlToBase64, exportSceneDataUrl } from "./canvas/shared";
+import { useAppDark } from "./chrome/ThemeToggle";
+import { ExternalLinkIcon, RefreshCwIcon, SparklesIcon } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/components/ui/input-group";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { MessageResponse } from "@/components/ai-elements/message";
+import { useAiStream } from "./ai/useAiStream";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -214,24 +222,6 @@ function arrowSkeleton(
 
 // ---------------------------------------------------------------------------
 
-/** App theme, reactively: tracks the `.dark` class the ThemeToggle flips. */
-function useAppDark(): boolean {
-  const [dark, setDark] = useState(() =>
-    document.documentElement.classList.contains("dark"),
-  );
-  useEffect(() => {
-    const observer = new MutationObserver(() =>
-      setDark(document.documentElement.classList.contains("dark")),
-    );
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class"],
-    });
-    return () => observer.disconnect();
-  }, []);
-  return dark;
-}
-
 /**
  * Concept map on an Excalidraw canvas (v2 graph view, canvas edition):
  * generated from the paper's knowledge graph, then fully yours — move
@@ -240,6 +230,10 @@ function useAppDark(): boolean {
  * user data; "Rebuild from graph" regenerates the machine layout after an
  * explicit confirmation (your canvas is never silently replaced).
  */
+/** Stable anchor id for the canvas chat thread — one per paper, persisted
+ * in the same chat journal as object chats. */
+const CANVAS_CHAT_ANCHOR = "00000000-0000-4000-8000-0000000000ca";
+
 export default function GraphView({
   paperId,
   onOpenConcept,
@@ -256,6 +250,25 @@ export default function GraphView({
   >(undefined);
   const [selectedConcept, setSelectedConcept] = useState<ConceptNode | null>(null);
   const [confirmRebuild, setConfirmRebuild] = useState(false);
+
+  // Ask-AI-about-the-canvas: the model sees the exported PNG (vision models)
+  // plus a text description of shapes and arrows (every model).
+  const [askOpen, setAskOpen] = useState(false);
+  const [askQuestion, setAskQuestion] = useState("");
+  const canvasStream = useAiStream(paperId);
+
+  async function askCanvas() {
+    const api = apiRef.current;
+    const question = askQuestion.trim();
+    if (!api || !question || canvasStream.streaming) return;
+    const elements = api.getSceneElements();
+    const summary = canvasSummary(elements as unknown as Record<string, any>[]);
+    const dataUrl = await exportSceneDataUrl(api);
+    const images = dataUrl
+      ? [{ media_type: "image/png", data_b64: dataUrlToBase64(dataUrl) }]
+      : [];
+    canvasStream.start(CANVAS_CHAT_ANCHOR, "ask", question, summary, images);
+  }
   const apiRef = useRef<ExcalidrawImperativeAPI | null>(null);
   const dotsRef = useRef<HTMLDivElement | null>(null);
   const saveTimer = useRef<number | undefined>(undefined);
@@ -421,6 +434,10 @@ export default function GraphView({
             {selectedConcept.name.length > 24 ? "…" : ""}” in paper
           </Button>
         )}
+        <Button variant="outline" size="sm" onClick={() => setAskOpen(true)}>
+          <SparklesIcon data-icon="inline-start" />
+          Ask AI
+        </Button>
         {graph && graph.nodes.length > 0 && (
           <Button variant="ghost" size="sm" onClick={() => setConfirmRebuild(true)}>
             <RefreshCwIcon data-icon="inline-start" />
@@ -428,6 +445,74 @@ export default function GraphView({
           </Button>
         )}
       </div>
+
+      {/* Canvas Q&A: the model gets the diagram as an image + a structural
+          summary; answers stream into the paper's canvas chat thread. */}
+      <Dialog
+        open={askOpen}
+        onOpenChange={(open) => {
+          setAskOpen(open);
+          if (!open && canvasStream.streaming) canvasStream.cancel();
+        }}
+      >
+        <DialogContent className="flex max-h-[75vh] flex-col sm:max-w-lg">
+          <DialogHeader className="flex-none">
+            <DialogTitle>Ask AI about this canvas</DialogTitle>
+            <DialogDescription>
+              The AI sees your diagram (as an image and its shapes/arrows) and
+              the paper context.
+            </DialogDescription>
+          </DialogHeader>
+          <InputGroup className="flex-none">
+            <InputGroupInput
+              placeholder="What's missing from this map? Explain the flow…"
+              value={askQuestion}
+              disabled={canvasStream.streaming}
+              onChange={(e) => setAskQuestion(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && askCanvas()}
+            />
+            <InputGroupAddon align="inline-end">
+              <InputGroupButton
+                size="icon-xs"
+                disabled={canvasStream.streaming || !askQuestion.trim()}
+                onClick={askCanvas}
+                title="Ask"
+              >
+                <SparklesIcon />
+              </InputGroupButton>
+            </InputGroupAddon>
+          </InputGroup>
+          {(canvasStream.text || canvasStream.streaming || canvasStream.error) && (
+            <ScrollArea className="min-h-0 flex-1 rounded-md border">
+              <div className="p-3 text-sm">
+                {canvasStream.text && <MessageResponse>{canvasStream.text}</MessageResponse>}
+                {canvasStream.streaming && (
+                  <div className="mt-2 flex items-center gap-2 text-muted-foreground">
+                    <Spinner /> thinking…
+                    <Button variant="ghost" size="sm" onClick={() => canvasStream.cancel()}>
+                      Stop
+                    </Button>
+                  </div>
+                )}
+                {canvasStream.error && (
+                  <p className="text-destructive">{canvasStream.error}</p>
+                )}
+              </div>
+            </ScrollArea>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Selected concept: the extracted description, right where you read. */}
+      {selectedConcept?.description && (
+        <div className="flex-none px-3 pb-2">
+          <p className="rounded-md border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">{selectedConcept.name}</span>
+            {" — "}
+            {selectedConcept.description}
+          </p>
+        </div>
+      )}
 
       <div className="relative min-h-0 flex-1">
         {/* Dotted backdrop, visible through the transparent canvas. */}

@@ -80,6 +80,18 @@ pub enum ModelClass {
 pub struct ChatMessage {
     pub role: String, // "system" | "user" | "assistant"
     pub content: String,
+    /// Inline image attachments (base64) — sent to multimodal providers;
+    /// empty for text-only turns, absent in older journals.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub images: Vec<ImageAttachment>,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
+pub struct ImageAttachment {
+    /// e.g. "image/png", "image/jpeg"
+    pub media_type: String,
+    /// Raw base64 (no data: prefix).
+    pub data_b64: String,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -324,7 +336,28 @@ impl Provider {
         let chat: Vec<serde_json::Value> = messages
             .iter()
             .filter(|m| m.role != "system")
-            .map(|m| serde_json::json!({"role": m.role, "content": m.content}))
+            .map(|m| {
+                if m.images.is_empty() {
+                    serde_json::json!({"role": m.role, "content": m.content})
+                } else {
+                    let mut blocks: Vec<serde_json::Value> = m
+                        .images
+                        .iter()
+                        .map(|img| {
+                            serde_json::json!({
+                                "type": "image",
+                                "source": {
+                                    "type": "base64",
+                                    "media_type": img.media_type,
+                                    "data": img.data_b64,
+                                }
+                            })
+                        })
+                        .collect();
+                    blocks.push(serde_json::json!({"type": "text", "text": m.content}));
+                    serde_json::json!({"role": m.role, "content": blocks})
+                }
+            })
             .collect();
         // Generous output budget: reasoning models (GLM, o-series style)
         // spend tokens thinking before any text; a small cap can exhaust
@@ -375,7 +408,27 @@ impl Provider {
         let body = serde_json::json!({
             "model": self.model,
             "stream": true,
-            "messages": messages.iter().map(|m| serde_json::json!({"role": m.role, "content": m.content})).collect::<Vec<_>>(),
+            "messages": messages
+                .iter()
+                .map(|m| {
+                    if m.images.is_empty() {
+                        serde_json::json!({"role": m.role, "content": m.content})
+                    } else {
+                        let mut parts: Vec<serde_json::Value> = m
+                            .images
+                            .iter()
+                            .map(|img| {
+                                serde_json::json!({
+                                    "type": "image_url",
+                                    "image_url": {"url": format!("data:{};base64,{}", img.media_type, img.data_b64)}
+                                })
+                            })
+                            .collect();
+                        parts.push(serde_json::json!({"type": "text", "text": m.content}));
+                        serde_json::json!({"role": m.role, "content": parts})
+                    }
+                })
+                .collect::<Vec<_>>(),
         });
         let mut request = ureq::post(&format!("{}{path}", self.base_url))
             .set("content-type", "application/json")
@@ -593,6 +646,7 @@ mod tests {
                 &[ChatMessage {
                     role: "user".into(),
                     content: "hi".into(),
+                    images: vec![],
                 }],
                 &mut |t| tokens.push(t.to_string()),
             )
@@ -624,10 +678,12 @@ mod tests {
                     ChatMessage {
                         role: "system".into(),
                         content: "be brief".into(),
+                        images: vec![],
                     },
                     ChatMessage {
                         role: "user".into(),
                         content: "what is Q".into(),
+                        images: vec![],
                     },
                 ],
                 &mut |_| {},
@@ -649,6 +705,7 @@ mod tests {
             &[ChatMessage {
                 role: "user".into(),
                 content: "x".into(),
+                images: vec![],
             }],
             &mut |_| {},
         ) {

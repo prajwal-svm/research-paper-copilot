@@ -3,13 +3,16 @@ import { invoke } from "@/platform";
 import * as pdfjs from "pdfjs-dist";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import {
-  ArrowLeftIcon,
+  HomeIcon,
   EraserIcon,
   FileTextIcon,
   FlaskConicalIcon,
   FolderGit2Icon,
   GraduationCapIcon,
   LightbulbIcon,
+  ChevronsLeftIcon,
+  ChevronsRightIcon,
+  GripVerticalIcon,
   PuzzleIcon,
   UsersIcon,
   HighlighterIcon,
@@ -17,6 +20,7 @@ import {
   ScanTextIcon,
   SearchIcon,
   SquareDashedMousePointerIcon,
+  TextIcon,
   WaypointsIcon,
   XIcon,
   ZoomInIcon,
@@ -47,8 +51,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ObjectPanel from "./ObjectPanel";
+import PaperMarkdownDialog from "./PaperMarkdownDialog";
 import InkLayer, { INK_COLORS, type InkStroke, type InkTool } from "./InkLayer";
-import ThemeToggle from "./chrome/ThemeToggle";
 import { AnnotationsMenu, type Bookmark, type Note } from "./Annotations";
 import { CitationTargets, type CitationsDocument } from "./CitationLayer";
 import type {
@@ -116,6 +120,7 @@ export default function Reader({
   const [rawView, setRawView] = useState(false);
   const [extractionNotice, setExtractionNotice] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [markdownOpen, setMarkdownOpen] = useState(false);
   const [paneMode, setPaneMode] = useState<
     "pdf" | "graph" | "lessons" | "experiments" | "repro" | "extend" | "plugins" | "community"
   >(initialPane ?? "pdf");
@@ -544,6 +549,7 @@ export default function Reader({
         onToggleExtend={() => setPaneMode((m) => (m === "extend" ? "pdf" : "extend"))}
         onTogglePlugins={() => setPaneMode((m) => (m === "plugins" ? "pdf" : "plugins"))}
         onToggleCommunity={() => setPaneMode((m) => (m === "community" ? "pdf" : "community"))}
+        onOpenMarkdown={() => setMarkdownOpen(true)}
         annotations={
           <AnnotationsMenu
             paperId={paperId}
@@ -556,6 +562,11 @@ export default function Reader({
             onNavigate={goToObject}
           />
         }
+      />
+      <PaperMarkdownDialog
+        paperId={paperId}
+        open={markdownOpen}
+        onOpenChange={setMarkdownOpen}
       />
       {searchOpen && (
         <SearchPanel
@@ -712,6 +723,7 @@ export default function Reader({
                     tree?.objects.find((o) => o.id === id)?.semantic_label ??
                     tree?.objects.find((o) => o.id === id)?.content.text.slice(0, 50)
                   }
+                  notes={notes}
                   onEscapeToObject={(objectId) => {
                     // Escape to the paper (<300 ms); the lesson cursor is
                     // persisted, so toggling back resumes the same step.
@@ -722,6 +734,29 @@ export default function Reader({
                     setPaneMode("pdf");
                     window.setTimeout(() => goToObject(objectId), 30);
                   }}
+                  onHighlight={async (text, anchorObjectId) => {
+                    const anchor = tree?.objects.find((o) => o.id === anchorObjectId);
+                    if (!anchor) return;
+                    await invoke("note_save", {
+                      paperId,
+                      noteId: crypto.randomUUID(),
+                      objectId: anchorObjectId,
+                      anchorHash: anchor.content_hash,
+                      markdown: "> " + text,
+                    }).catch(() => {});
+                    refreshAnnotations();
+                  }}
+                  onQuote={(text) =>
+                    setSelected({
+                      kind: "ad-hoc",
+                      selection: {
+                        id: crypto.randomUUID(),
+                        type: "selection",
+                        text,
+                        regions: [],
+                      },
+                    })
+                  }
                 />
               </div>
             )}
@@ -774,7 +809,9 @@ export default function Reader({
               </div>
             </div>
           </ResizablePanel>
-          {selected && (
+          {/* The object panel accompanies the PDF and reading mode (quote in
+              chat); canvas/graph and other panes keep their full width. */}
+          {(paneMode === "pdf" || paneMode === "lessons") && selected && (
             <>
               <ResizableHandle withHandle />
               <ResizablePanel defaultSize="32%" minSize="300px" maxSize="55%">
@@ -823,6 +860,7 @@ function ReaderBar({
   onToggleExtend,
   onTogglePlugins,
   onToggleCommunity,
+  onOpenMarkdown,
 }: {
   onBack: () => void;
   rawView: boolean;
@@ -844,24 +882,105 @@ function ReaderBar({
   onToggleExtend?: () => void;
   onTogglePlugins?: () => void;
   onToggleCommunity?: () => void;
+  /** Open the parsed-markdown view of the paper. */
+  onOpenMarkdown?: () => void;
 }) {
+  // The dock can block the chat composer — it's draggable by its grip
+  // (double-click the grip to reset), position persisted per machine.
+  const [dockOffset, setDockOffset] = useState<{ x: number; y: number }>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("reader-dock-offset") ?? "") as {
+        x: number;
+        y: number;
+      };
+    } catch {
+      return { x: 0, y: 0 };
+    }
+  });
+  const dragState = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(
+    null,
+  );
+  // Motion's layout projection and text selection both fight the drag:
+  // disable them for its duration, animate only collapse/expand.
+  const [draggingDock, setDraggingDock] = useState(false);
+  function onGripPointerDown(event: React.PointerEvent) {
+    event.preventDefault();
+    (event.target as HTMLElement).setPointerCapture(event.pointerId);
+    dragState.current = {
+      startX: event.clientX,
+      startY: event.clientY,
+      baseX: dockOffset.x,
+      baseY: dockOffset.y,
+    };
+    setDraggingDock(true);
+    document.body.style.userSelect = "none";
+  }
+  function onGripPointerMove(event: React.PointerEvent) {
+    const drag = dragState.current;
+    if (!drag) return;
+    event.preventDefault();
+    setDockOffset({
+      x: drag.baseX + (event.clientX - drag.startX),
+      y: Math.min(0, drag.baseY + (event.clientY - drag.startY)),
+    });
+  }
+  function onGripPointerUp() {
+    dragState.current = null;
+    setDraggingDock(false);
+    document.body.style.userSelect = "";
+    localStorage.setItem("reader-dock-offset", JSON.stringify(dockOffset));
+  }
+
+  // Collapsed, the dock shrinks to the grip + an expand chevron — the PDF
+  // gets the space back. Persisted per machine, like the drag offset.
+  const [dockCollapsed, setDockCollapsed] = useState(
+    () => localStorage.getItem("reader-dock-collapsed") === "1",
+  );
+  function toggleDockCollapsed() {
+    setDockCollapsed((collapsed) => {
+      localStorage.setItem("reader-dock-collapsed", collapsed ? "0" : "1");
+      return !collapsed;
+    });
+  }
+
   return (
     <>
       {/* No toolbar: window dragging is handled by an overlay strip inside
           the PDF pane (see Reader) and by the object panel's header. */}
-      <div className="pointer-events-none fixed inset-x-0 bottom-4 z-20 flex justify-center">
+      <div
+        className="pointer-events-none fixed inset-x-0 bottom-4 z-20 flex justify-center"
+        style={{ transform: "translate(" + dockOffset.x + "px, " + dockOffset.y + "px)" }}
+      >
         <Dock
           className="pointer-events-auto mt-0 bg-background/80"
           iconMagnification={52}
           iconSize={36}
+          layout={!draggingDock}
         >
+          <div
+            className="flex cursor-grab touch-none items-center self-stretch px-0.5 select-none active:cursor-grabbing"
+            title="Drag to move the toolbar (double-click to reset)"
+            onPointerDown={onGripPointerDown}
+            onPointerMove={onGripPointerMove}
+            onPointerUp={onGripPointerUp}
+            onPointerCancel={onGripPointerUp}
+            onDoubleClick={() => {
+              setDockOffset({ x: 0, y: 0 });
+              localStorage.setItem("reader-dock-offset", JSON.stringify({ x: 0, y: 0 }));
+            }}
+          >
+            <GripVerticalIcon className="text-muted-foreground size-4" />
+          </div>
+          {!dockCollapsed && (
+          <div className="contents *:animate-in *:fade-in *:zoom-in-75 *:duration-300">
           <DockIcon>
             <DockTip label="Back to library">
               <Button variant="ghost" size="icon" className="size-full" onClick={onBack}>
-                <ArrowLeftIcon />
+                <HomeIcon />
               </Button>
             </DockTip>
           </DockIcon>
+          <DockGroupSeparator />
           {onToggleRegionMode && (
             <DockIcon>
               <DockTip label="Select a region — drag a rectangle over anything (⌥+drag)">
@@ -935,6 +1054,34 @@ function ReaderBar({
               </DockTip>
             </DockIcon>
           )}
+          <DockIcon>
+            <DockTip label={rawView ? "Raw view (object layer off)" : "Interactive view"}>
+              <Button
+                variant={rawView ? "secondary" : "ghost"}
+                size="icon"
+                className="size-full"
+                onClick={onToggleRaw}
+                disabled={!hasObjectLayer && !rawView}
+              >
+                {rawView ? <FileTextIcon /> : <ScanTextIcon />}
+              </Button>
+            </DockTip>
+          </DockIcon>
+          {onOpenMarkdown && (
+            <DockIcon>
+              <DockTip label="View as Markdown — the parsed paper, refinable with AI">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-full"
+                  onClick={onOpenMarkdown}
+                >
+                  <TextIcon />
+                </Button>
+              </DockTip>
+            </DockIcon>
+          )}
+          <DockGroupSeparator />
           {onToggleGraph && (
             <DockIcon>
               <DockTip label={paneMode === "graph" ? "Back to the paper" : "Concept map"}>
@@ -1045,28 +1192,29 @@ function ReaderBar({
               </DockTip>
             </DockIcon>
           )}
+          </div>
+          )}
           <DockIcon>
-            <DockTip label={rawView ? "Raw view (object layer off)" : "Interactive view"}>
+            <DockTip label={dockCollapsed ? "Expand toolbar" : "Collapse toolbar"}>
               <Button
-                variant={rawView ? "secondary" : "ghost"}
+                variant="ghost"
                 size="icon"
                 className="size-full"
-                onClick={onToggleRaw}
-                disabled={!hasObjectLayer && !rawView}
+                onClick={toggleDockCollapsed}
               >
-                {rawView ? <FileTextIcon /> : <ScanTextIcon />}
+                {dockCollapsed ? <ChevronsRightIcon /> : <ChevronsLeftIcon />}
               </Button>
-            </DockTip>
-          </DockIcon>
-          <DockIcon>
-            <DockTip label="Toggle theme">
-              <ThemeToggle className="size-full" />
             </DockTip>
           </DockIcon>
         </Dock>
       </div>
     </>
   );
+}
+
+/** Thin divider between dock groups (navigation · PDF tools · research). */
+function DockGroupSeparator() {
+  return <div aria-hidden className="mx-0.5 h-6 w-px self-center bg-border" />;
 }
 
 /** Floating ink tool palette (pen / highlighter / eraser + colors). */

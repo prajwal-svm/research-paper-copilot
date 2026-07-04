@@ -5,8 +5,11 @@ import {
   FileTextIcon,
   ImportIcon,
   LibraryIcon,
+  FrameIcon,
   LinkIcon,
+  MessagesSquareIcon,
   MoonIcon,
+  NotebookTextIcon,
   PenToolIcon,
   SearchIcon,
   SettingsIcon,
@@ -27,7 +30,7 @@ import { cn } from "@/lib/utils";
 import { toggleTheme } from "./ThemeToggle";
 import { pickAndImportPdf } from "./importActions";
 import ImportArxivDialog from "./ImportArxivDialog";
-import type { PaperSummary } from "../types";
+import type { PaperSummary, WorkspaceItem } from "../types";
 
 const OPEN_EVENT = "omnibar:open";
 
@@ -108,24 +111,49 @@ export default function Omnibar({
   onGoLibrary,
   onGoResearch,
   onOpenSettings,
+  onOpenNote,
+  onOpenCanvas,
+  onOpenChat,
+  onOpenChatOverlay,
 }: {
   /** Open a paper; pane "graph" lands on its canvas view. */
   onOpenPaper: (id: string, title: string, pane?: "graph" | "community") => void;
   onGoLibrary: () => void;
   onGoResearch: () => void;
   onOpenSettings: () => void;
+  /** Open a workspace note by id. */
+  onOpenNote?: (id: string) => void;
+  /** Open a workspace canvas by id. */
+  onOpenCanvas?: (id: string) => void;
+  /** Open a chat thread by id (full screen). */
+  onOpenChat?: (id: string) => void;
+  /** Summon the chat overlay. */
+  onOpenChatOverlay?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [papers, setPapers] = useState<PaperSummary[]>([]);
+  const [workspaceItems, setWorkspaceItems] = useState<WorkspaceItem[]>([]);
   const [arxivOpen, setArxivOpen] = useState(false);
 
   // ⌘K / Ctrl+K everywhere + programmatic open (trigger pill).
+  // ⌘⇧N: quick-capture a note from any view.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setOpen((o) => !o);
+      }
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        e.shiftKey &&
+        e.key.toLowerCase() === "n" &&
+        onOpenNote
+      ) {
+        e.preventDefault();
+        invoke<WorkspaceItem>("workspace_note_create", {})
+          .then((item) => onOpenNote(item.id))
+          .catch(() => {});
       }
     };
     const onOpenEvent = () => setOpen(true);
@@ -135,7 +163,7 @@ export default function Omnibar({
       window.removeEventListener("keydown", onKey);
       window.removeEventListener(OPEN_EVENT, onOpenEvent);
     };
-  }, []);
+  }, [onOpenNote]);
 
   // Fresh index on every open.
   useEffect(() => {
@@ -144,6 +172,9 @@ export default function Omnibar({
     invoke<PaperSummary[]>("list_papers")
       .then(setPapers)
       .catch(() => setPapers([]));
+    invoke<WorkspaceItem[]>("workspace_items_list", {})
+      .then(setWorkspaceItems)
+      .catch(() => setWorkspaceItems([]));
   }, [open]);
 
   const run = useCallback((action: () => void) => {
@@ -189,12 +220,76 @@ export default function Omnibar({
               </CommandItem>
               <CommandItem
                 value="cmd:import-arxiv"
-                keywords={["/import", "/import arxiv", "import", "arxiv", "doi", "url"]}
+                keywords={["/import", "/import arxiv", "import", "arxiv", "doi", "url", "pdf link"]}
                 onSelect={() => run(() => setArxivOpen(true))}
               >
                 <LinkIcon />
-                Import from arXiv / DOI…
+                Import from link (arXiv / DOI / PDF)…
               </CommandItem>
+              {onOpenNote && (
+                <CommandItem
+                  value="cmd:new-note"
+                  keywords={["/note", "new note", "note", "create", "write"]}
+                  onSelect={() =>
+                    run(async () => {
+                      const item = await invoke<WorkspaceItem>(
+                        "workspace_note_create",
+                        {},
+                      ).catch(() => null);
+                      if (item) onOpenNote(item.id);
+                    })
+                  }
+                >
+                  <NotebookTextIcon />
+                  New note
+                </CommandItem>
+              )}
+              {onOpenCanvas && (
+                <CommandItem
+                  value="cmd:new-canvas"
+                  keywords={["/canvas", "new canvas", "canvas", "draw", "diagram", "excalidraw"]}
+                  onSelect={() =>
+                    run(async () => {
+                      const item = await invoke<WorkspaceItem>(
+                        "workspace_canvas_create",
+                        {},
+                      ).catch(() => null);
+                      if (item) onOpenCanvas(item.id);
+                    })
+                  }
+                >
+                  <FrameIcon />
+                  New canvas
+                </CommandItem>
+              )}
+              {onOpenChat && (
+                <CommandItem
+                  value="cmd:new-chat"
+                  keywords={["/chat", "new chat", "chat", "ask", "thread"]}
+                  onSelect={() =>
+                    run(async () => {
+                      const item = await invoke<WorkspaceItem>(
+                        "workspace_chat_create",
+                        {},
+                      ).catch(() => null);
+                      if (item) onOpenChat(item.id);
+                    })
+                  }
+                >
+                  <MessagesSquareIcon />
+                  New chat
+                </CommandItem>
+              )}
+              {onOpenChatOverlay && (
+                <CommandItem
+                  value="cmd:chat-overlay"
+                  keywords={["/chat", "overlay", "quick chat", "ask"]}
+                  onSelect={() => run(onOpenChatOverlay)}
+                >
+                  <MessagesSquareIcon />
+                  Open chat overlay (⌘⇧C)
+                </CommandItem>
+              )}
               <CommandItem
                 value="cmd:theme"
                 keywords={["/theme", "theme", "dark", "light", "toggle"]}
@@ -242,6 +337,45 @@ export default function Omnibar({
                     >
                       <FileTextIcon />
                       <span className="truncate">{paper.title}</span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </>
+            )}
+
+            {workspaceItems.length > 0 && (
+              <>
+                <CommandSeparator />
+                <CommandGroup heading="Workspace">
+                  {workspaceItems.map((item) => (
+                    <CommandItem
+                      key={item.id}
+                      value={`workspace:${item.title} ${item.kind}`}
+                      keywords={["/open", item.kind]}
+                      onSelect={() =>
+                        run(() => {
+                          if (item.kind === "note" && onOpenNote) {
+                            onOpenNote(item.id);
+                          } else if (item.kind === "canvas" && onOpenCanvas) {
+                            onOpenCanvas(item.id);
+                          } else if (item.kind === "chat" && onOpenChat) {
+                            onOpenChat(item.id);
+                          } else {
+                            toast.info(
+                              `Opening ${item.kind}s lands with the ${item.kind}s feature.`,
+                            );
+                          }
+                        })
+                      }
+                    >
+                      {item.kind === "canvas" ? (
+                        <FrameIcon />
+                      ) : item.kind === "chat" ? (
+                        <MessagesSquareIcon />
+                      ) : (
+                        <NotebookTextIcon />
+                      )}
+                      <span className="truncate">{item.title}</span>
                     </CommandItem>
                   ))}
                 </CommandGroup>

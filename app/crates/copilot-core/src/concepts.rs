@@ -16,7 +16,11 @@ use uuid::Uuid;
 use crate::bundle::Bundle;
 use crate::objects::{ObjectType, SemanticTreeDocument};
 
-pub const CONCEPTS_PIPELINE_VERSION: &str = "0.1.0";
+// 0.2.0: comprehensive extraction — 15-40 concepts spanning the whole paper
+// (methods, equations, datasets, metrics, results, limitations) with 2-3
+// sentence descriptions and a connectivity requirement. Bumping the version
+// marks existing graphs stale, so a re-run rebuilds them richer.
+pub const CONCEPTS_PIPELINE_VERSION: &str = "0.2.0";
 
 /// Namespace for deterministic concept-node UUIDs. Never change.
 const CONCEPT_NAMESPACE: Uuid = Uuid::from_bytes([
@@ -239,16 +243,22 @@ pub fn extraction_prompt(tree: &SemanticTreeDocument, title: &str) -> String {
         }
     }
     format!(
-        "Extract the concept graph of this research paper.\n\
+        "Extract a comprehensive concept graph of this research paper — the map a reader \
+         would use to understand the entire paper, not just its highlights.\n\
          Paper: {title}\n\
          ---\n{outline}\n---\n\
          Return ONLY JSON, no prose, in this exact shape:\n\
-         {{\"concepts\": [{{\"name\": str, \"description\": str (one sentence), \"anchors\": [str] (verbatim section headings or object labels above that introduce/use it)}}],\n\
+         {{\"concepts\": [{{\"name\": str, \"description\": str (2-3 sentences: what it is, its role in this paper, and how it connects to related concepts), \"anchors\": [str] (verbatim section headings or object labels above that introduce/use it)}}],\n\
           \"edges\": [{{\"from\": str (concept name), \"to\": str (concept name), \"kind\": one of prerequisite_of|depends_on|defined_in|used_by|extends|contradicts|cites}}]}}\n\
-         Rules: 8-25 concepts; concepts are ideas (e.g. \"Multi-Head Attention\"), not section titles like \"Introduction\"; \
-         every concept needs at least one anchor; edges only between listed concepts. \
+         Rules: 15-40 concepts covering the WHOLE paper — the core problem and motivation, \
+         every method/architecture component, key equations and algorithms, datasets, \
+         evaluation metrics, main results, limitations, and future directions; \
+         concepts are ideas (e.g. \"Multi-Head Attention\"), not section titles like \"Introduction\"; \
+         every concept needs at least one anchor; every concept should appear in at least one \
+         edge — prefer one connected graph over isolated nodes; edges only between listed concepts. \
          Edge direction matters: \"A prerequisite_of B\" = A must be understood before B; \
-         \"A depends_on B\" = A builds on B; \"A extends B\" = A generalizes/improves B. \
+         \"A depends_on B\" = A builds on B; \"A extends B\" = A generalizes/improves B; \
+         \"A used_by B\" = B applies A. \
          Prefer prerequisite_of for learning order."
     )
 }

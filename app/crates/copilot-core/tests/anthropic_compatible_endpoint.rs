@@ -82,6 +82,7 @@ fn ask() -> Vec<ChatMessage> {
     vec![ChatMessage {
         role: "user".into(),
         content: "hello".into(),
+        images: vec![],
     }]
 }
 

@@ -21,8 +21,11 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
+  /* User-selectable accent (Settings → Appearance); #006bff by default. */
+  --app-primary: #006bff;
+  --app-primary-foreground: #ffffff;
+  --primary: var(--app-primary);
+  --primary-foreground: var(--app-primary-foreground);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
@@ -49,6 +52,16 @@
 
 body {
   margin: 0;
+}
+
+/* Reading-mode highlights (CSS Custom Highlight API): light yellow wash
+   over the rendered markdown, readable in both themes. */
+::highlight(lesson-highlights) {
+  background-color: rgb(254 240 138 / 0.45);
+  color: inherit;
+}
+.dark ::highlight(lesson-highlights) {
+  background-color: rgb(254 240 138 / 0.28);
 }
 
 /* Fixed-size page slot for the virtualized PDF canvas reader. */
@@ -176,8 +189,8 @@ body {
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
+  --primary: var(--app-primary);
+  --primary-foreground: var(--app-primary-foreground);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);

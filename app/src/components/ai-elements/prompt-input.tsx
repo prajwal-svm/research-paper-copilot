@@ -1198,6 +1198,16 @@ export const PromptInputSpeechButton = ({
     }
   }, [recognition, isListening]);
 
+  // No Web Speech API in this webview (e.g. WKWebView): render nothing —
+  // a permanently disabled mic reads as broken.
+  if (
+    typeof window !== "undefined" &&
+    !("SpeechRecognition" in window) &&
+    !("webkitSpeechRecognition" in window)
+  ) {
+    return null;
+  }
+
   return (
     <PromptInputButton
       className={cn(

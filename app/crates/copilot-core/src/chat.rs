@@ -149,6 +149,7 @@ pub fn as_thread(history: &[StoredChatMessage]) -> Vec<ChatMessage> {
     history
         .iter()
         .map(|m| ChatMessage {
+            images: Vec::new(),
             role: m.role.clone(),
             content: if m.incomplete {
                 format!("{} [answer was cut off here]", m.content)

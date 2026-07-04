@@ -8,6 +8,10 @@ use tauri::{AppHandle, Emitter, Manager, State};
 /// Library handle shared across commands.
 struct AppState {
     library: Mutex<Library>,
+    /// Workspace store (notes/canvases/threads): workspace.db inside the
+    /// library root. `Err` keeps the app usable when the store can't open
+    /// (e.g. created by a newer app) — commands surface the message.
+    workspace: Mutex<Result<copilot_core::workspace::WorkspaceStore, String>>,
     /// Lazily-loaded local embedding model (used by semantic search; the
     /// pipeline loads its own). `None` until first use or if loading fails.
     embedder: Mutex<Option<copilot_core::embeddings::Embedder>>,
@@ -43,20 +47,46 @@ fn list_papers(state: State<AppState>) -> Result<Vec<PaperSummary>, String> {
 
 /// Import a local PDF file. Returns the new paper id immediately; ingestion
 /// runs in the background and emits `ingestion-progress` events.
-#[tauri::command]
+#[tauri::command(async)]
 fn import_pdf_file(app: AppHandle, state: State<AppState>, path: String) -> Result<String, String> {
     let pdf = std::fs::read(&path).map_err(|e| format!("could not read {path}: {e}"))?;
-    let title = std::path::Path::new(&path)
-        .file_stem()
-        .map(|s| s.to_string_lossy().to_string())
+    // Real paper identity, best-effort: the embedded PDF title (confirmed
+    // against Crossref) beats the filename; offline just falls back.
+    let metadata_title = copilot_core::identify::pdf_metadata_title(&pdf);
+    let identified = metadata_title
+        .as_deref()
+        .and_then(copilot_core::identify::crossref_identify)
+        .unwrap_or_default();
+    let title = identified
+        .title
+        .clone()
+        .or(metadata_title)
+        .or_else(|| {
+            std::path::Path::new(&path)
+                .file_stem()
+                .map(|s| s.to_string_lossy().to_string())
+        })
         .unwrap_or_else(|| "Untitled".to_string());
     let library = state.library.lock().unwrap();
     let id = library.new_bundle_id(&title);
     let bundle_root = library.bundle_path(&id);
     drop(library);
 
-    copilot_core::bundle::Bundle::create(&bundle_root, &pdf, Paper::new(title), "file")
-        .map_err(ui_err)?;
+    let mut paper = Paper::new(title);
+    paper.authors = identified.authors;
+    if let Some(doi) = &identified.doi {
+        paper.extra.insert(
+            "identifiers".to_string(),
+            serde_json::json!({"doi": doi}),
+        );
+    }
+    if let Some(published_at) = &identified.published_at {
+        paper.extra.insert(
+            "published_at".to_string(),
+            serde_json::json!(published_at),
+        );
+    }
+    copilot_core::bundle::Bundle::create(&bundle_root, &pdf, paper, "file").map_err(ui_err)?;
     spawn_ingestion(app, id.clone(), bundle_root);
     Ok(id)
 }
@@ -144,10 +174,23 @@ fn import_url(
     let mut paper = Paper::new(fetched.title.clone());
     paper.authors = fetched.authors.clone();
     paper.abstract_text = fetched.abstract_text.clone();
+    let mut identifiers = serde_json::Map::new();
     if let Some(arxiv_id) = &fetched.arxiv_id {
+        identifiers.insert("arxiv_id".to_string(), serde_json::json!(arxiv_id));
+    }
+    if let Some(doi) = &fetched.doi {
+        identifiers.insert("doi".to_string(), serde_json::json!(doi));
+    }
+    if !identifiers.is_empty() {
         paper.extra.insert(
             "identifiers".to_string(),
-            serde_json::json!({"arxiv_id": arxiv_id}),
+            serde_json::Value::Object(identifiers),
+        );
+    }
+    if let Some(published_at) = &fetched.published_at {
+        paper.extra.insert(
+            "published_at".to_string(),
+            serde_json::json!(published_at),
         );
     }
 
@@ -168,6 +211,850 @@ fn import_url(
     }
     spawn_ingestion(app, id.clone(), bundle_root);
     Ok(id)
+}
+
+/// Does paragraph text look like chart debris (axis ticks, legend fragments)
+/// rather than prose? Mostly-numeric short blocks with no sentence structure.
+fn looks_like_chart_debris(text: &str) -> bool {
+    if text.len() > 240 {
+        return false;
+    }
+    let letters = text.chars().filter(|c| c.is_alphabetic()).count();
+    let digits = text.chars().filter(|c| c.is_ascii_digit()).count();
+    let words = text.split_whitespace().count();
+    // "60 50 40 30 20 10 0" / "Uplink Downlink" style fragments: numeric-heavy
+    // or a couple of label words with no sentence punctuation.
+    (digits > letters && words <= 30) || (words <= 3 && !text.contains('.'))
+}
+
+/// Fraction of `a` covered by `b` (same page only).
+fn overlap_fraction(a: &copilot_core::layout::BBox, b: &copilot_core::layout::BBox) -> f32 {
+    if a.page != b.page || a.width <= 0.0 || a.height <= 0.0 {
+        return 0.0;
+    }
+    let x0 = a.x.max(b.x);
+    let y0 = a.y.max(b.y);
+    let x1 = (a.x + a.width).min(b.x + b.width);
+    let y1 = (a.y + a.height).min(b.y + b.height);
+    if x1 <= x0 || y1 <= y0 {
+        return 0.0;
+    }
+    ((x1 - x0) * (y1 - y0)) / (a.width * a.height)
+}
+
+/// Assemble the parsed paper as markdown. Figures render either as inline
+/// data URLs (`inline_images`) or as stable `figure://<id>` placeholders —
+/// the placeholder form is what the AI-refinement pass sees (and what gets
+/// cached), so images never bloat prompts or the saved file.
+fn assemble_markdown(
+    bundle: &copilot_core::bundle::Bundle,
+    tree: &copilot_core::objects::SemanticTreeDocument,
+    title: &str,
+    inline_images: bool,
+) -> String {
+    use copilot_core::objects::ObjectType;
+
+    // Figure/table footprints: paragraph text inside them is chart lettering
+    // (axis ticks, legends), not prose.
+    let graphic_regions: Vec<copilot_core::layout::BBox> = tree
+        .objects
+        .iter()
+        .filter(|o| matches!(o.object_type, ObjectType::Figure | ObjectType::Table))
+        .flat_map(|o| o.regions.iter().cloned())
+        .collect();
+
+    let mut md = format!("# {title}\n");
+    for object in &tree.objects {
+        let text = object.content.text.trim();
+        match object.object_type {
+            ObjectType::Section => {
+                md.push_str("\n## ");
+                md.push_str(text);
+                md.push('\n');
+            }
+            ObjectType::Paragraph => {
+                let inside_graphic = object.regions.iter().any(|region| {
+                    graphic_regions
+                        .iter()
+                        .any(|graphic| overlap_fraction(region, graphic) > 0.5)
+                });
+                if inside_graphic || looks_like_chart_debris(text) {
+                    continue;
+                }
+                md.push('\n');
+                md.push_str(text);
+                md.push('\n');
+            }
+            ObjectType::Equation => {
+                md.push_str("\n$$\n");
+                md.push_str(text);
+                md.push_str("\n$$\n");
+            }
+            ObjectType::Figure => {
+                let label = object.semantic_label.as_deref().unwrap_or("figure");
+                if inline_images {
+                    use base64::Engine;
+                    let png = bundle.root().join(format!("figures/{}.png", object.id));
+                    if let Ok(bytes) = std::fs::read(&png) {
+                        let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
+                        md.push_str(&format!("\n![{label}](data:image/png;base64,{b64})\n"));
+                    }
+                } else {
+                    md.push_str(&format!("\n![{label}](figure://{})\n", object.id));
+                }
+                if !text.is_empty() {
+                    md.push_str(&format!("\n*{text}*\n"));
+                }
+            }
+            ObjectType::Table => {
+                md.push_str("\n```\n");
+                md.push_str(text);
+                md.push_str("\n```\n");
+            }
+            _ => {}
+        }
+    }
+    md
+}
+
+/// Replace `figure://<id>` placeholders with inline data URLs for display.
+fn substitute_figures(bundle: &copilot_core::bundle::Bundle, md: &str) -> String {
+    use base64::Engine;
+    let mut out = String::with_capacity(md.len());
+    let mut rest = md;
+    while let Some(pos) = rest.find("figure://") {
+        out.push_str(&rest[..pos]);
+        let after = &rest[pos + "figure://".len()..];
+        let end = after.find(')').unwrap_or(after.len());
+        let id = &after[..end];
+        let png = bundle.root().join(format!("figures/{id}.png"));
+        match std::fs::read(&png) {
+            Ok(bytes) => {
+                let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
+                out.push_str(&format!("data:image/png;base64,{b64}"));
+            }
+            Err(_) => out.push_str("about:blank"),
+        }
+        rest = &after[end..];
+    }
+    out.push_str(rest);
+    out
+}
+
+/// The parsed paper as one markdown document (raw object-layer assembly,
+/// figures inlined). Fast, deterministic, no AI.
+#[tauri::command]
+fn paper_markdown(state: State<AppState>, paper_id: String) -> Result<String, String> {
+    let bundle = state.library.lock().unwrap().get(&paper_id).map_err(ui_err)?;
+    let tree: copilot_core::objects::SemanticTreeDocument = bundle
+        .read_derived_json("semantic_tree.json")
+        .map_err(ui_err)?
+        .ok_or("This paper hasn't finished parsing yet — try once \"Extracting objects\" completes.")?;
+    let title = bundle.metadata().map_err(ui_err)?.paper.title;
+    Ok(assemble_markdown(&bundle, &tree, &title, true))
+}
+
+const CLEAN_MD_PATH: &str = "research/paper-clean.md";
+
+/// AI-refined markdown, generated once and cached in the bundle
+/// (`research/paper-clean.md`). `generate: false` only reads the cache;
+/// `regenerate: true` rebuilds it. Sections are cleaned chunk-by-chunk by
+/// the Strong-tier model: prose reflowed, chart debris dropped, tables
+/// formatted, figure placeholders preserved, mermaid where a flow is
+/// described. Figure placeholders are swapped for data URLs on read.
+#[tauri::command(async)]
+fn paper_markdown_clean(
+    state: State<AppState>,
+    paper_id: String,
+    generate: bool,
+    regenerate: Option<bool>,
+) -> Result<Option<String>, String> {
+    let bundle = state.library.lock().unwrap().get(&paper_id).map_err(ui_err)?;
+    let cache = bundle.root().join(CLEAN_MD_PATH);
+    if !regenerate.unwrap_or(false) {
+        if let Ok(cached) = std::fs::read_to_string(&cache) {
+            return Ok(Some(substitute_figures(&bundle, &cached)));
+        }
+    }
+    if !generate {
+        return Ok(None);
+    }
+
+    let tree: copilot_core::objects::SemanticTreeDocument = bundle
+        .read_derived_json("semantic_tree.json")
+        .map_err(ui_err)?
+        .ok_or("This paper hasn't finished parsing yet.")?;
+    let title = bundle.metadata().map_err(ui_err)?.paper.title;
+    let raw = assemble_markdown(&bundle, &tree, &title, false);
+
+    // Chunk on section boundaries to stay well inside context windows.
+    let mut chunks: Vec<String> = Vec::new();
+    let mut current = String::new();
+    for part in raw.split("\n## ") {
+        let part = if current.is_empty() && chunks.is_empty() {
+            part.to_string()
+        } else {
+            format!("\n## {part}")
+        };
+        if !current.is_empty() && current.len() + part.len() > 9_000 {
+            chunks.push(std::mem::take(&mut current));
+        }
+        current.push_str(&part);
+    }
+    if !current.is_empty() {
+        chunks.push(current);
+    }
+
+    let (provider, _config) = pick_provider(
+        &state.providers,
+        copilot_core::ai::ModelClass::Strong,
+    )?;
+    let total = chunks.len();
+    let mut clean = String::new();
+    for (i, chunk) in chunks.iter().enumerate() {
+        let prompt = format!(
+            "You are converting a research paper's raw PDF-extracted text into clean, \
+             publication-quality Markdown. This is part {part} of {total} of the paper — \
+             convert ONLY this part, do not summarize.\n\
+             Rules:\n\
+             - Reflow broken lines into proper paragraphs; repair hyphenation and spacing \
+             artifacts (e.g. \"s ru 100 o H #\" is extraction garbage — reconstruct or drop it).\n\
+             - DELETE stray chart axis ticks, legend fragments, and isolated number runs \
+             that leaked from figures.\n\
+             - Keep ALL substantive prose and headings (## …). Keep equations as $$ … $$.\n\
+             - Lines of the form ![…](figure://…) are image references: keep them EXACTLY \
+             as-is, in place, with their *italic* captions.\n\
+             - Format tabular data as Markdown tables when the structure is clear.\n\
+             - If a passage clearly describes a workflow or architecture, you may add one \
+             ```mermaid flowchart for it.\n\
+             - Output ONLY the Markdown for this part, no commentary.\n\
+             ---\n{chunk}",
+            part = i + 1,
+        );
+        let messages = [copilot_core::ai::ChatMessage {
+            images: Vec::new(),
+            role: "user".to_string(),
+            content: prompt,
+        }];
+        let piece = provider
+            .stream_chat(&messages, &mut |_| {})
+            .map_err(|e| format!("AI refinement failed on part {}/{total}: {e}", i + 1))?;
+        if !clean.is_empty() {
+            clean.push_str("\n\n");
+        }
+        clean.push_str(piece.trim());
+    }
+
+    if let Some(parent) = cache.parent() {
+        std::fs::create_dir_all(parent).map_err(ui_err)?;
+    }
+    std::fs::write(&cache, &clean).map_err(ui_err)?;
+    Ok(Some(substitute_figures(&bundle, &clean)))
+}
+
+/// Run `f` against the workspace store, surfacing open-failures (e.g. a
+/// newer-schema db) as plain command errors instead of crashing startup.
+fn with_workspace<T>(
+    state: &State<AppState>,
+    f: impl FnOnce(
+        &copilot_core::workspace::WorkspaceStore,
+    ) -> Result<T, copilot_core::workspace::WorkspaceError>,
+) -> Result<T, String> {
+    let guard = state.workspace.lock().unwrap();
+    match guard.as_ref() {
+        Ok(store) => f(store).map_err(ui_err),
+        Err(e) => Err(format!("workspace store unavailable: {e}")),
+    }
+}
+
+/// Live workspace items (notes/canvases/threads), newest-updated first.
+#[tauri::command]
+fn workspace_items_list(
+    state: State<AppState>,
+    kind: Option<String>,
+) -> Result<Vec<copilot_core::workspace::WorkspaceItem>, String> {
+    with_workspace(&state, |ws| ws.list_items(kind.as_deref()))
+}
+
+#[tauri::command]
+fn workspace_item_rename(
+    state: State<AppState>,
+    id: uuid::Uuid,
+    title: String,
+) -> Result<(), String> {
+    with_workspace(&state, |ws| ws.rename_item(id, &title))
+}
+
+/// Soft delete — the tombstone stays for future sync merge.
+#[tauri::command]
+fn workspace_item_delete(state: State<AppState>, id: uuid::Uuid) -> Result<(), String> {
+    with_workspace(&state, |ws| ws.delete_item(id))
+}
+
+/// Create a note (registry row + empty document) and return it.
+#[tauri::command]
+fn workspace_note_create(
+    state: State<AppState>,
+    title: Option<String>,
+) -> Result<copilot_core::workspace::WorkspaceItem, String> {
+    with_workspace(&state, |ws| {
+        ws.note_create(title.as_deref().unwrap_or("Untitled"))
+    })
+}
+
+#[tauri::command]
+fn workspace_note_get(
+    state: State<AppState>,
+    id: uuid::Uuid,
+) -> Result<Option<copilot_core::workspace::NoteDoc>, String> {
+    with_workspace(&state, |ws| ws.note_get(id))
+}
+
+/// Autosave: BlockNote JSON + markdown mirror; bumps library recency.
+#[tauri::command]
+fn workspace_note_save(
+    state: State<AppState>,
+    id: uuid::Uuid,
+    content: String,
+    markdown: String,
+) -> Result<(), String> {
+    with_workspace(&state, |ws| ws.note_save(id, &content, &markdown))
+}
+
+/// Reconcile a note's mention backlinks with its current document.
+#[tauri::command]
+fn workspace_note_refs_sync(
+    state: State<AppState>,
+    id: uuid::Uuid,
+    mentions: Vec<copilot_core::workspace::MentionRef>,
+) -> Result<(), String> {
+    with_workspace(&state, |ws| ws.note_sync_refs(id, &mentions))
+}
+
+/// A figure object's extracted PNG as a data URL, for pinning onto a
+/// canvas. `None` when the figure has no rendered image.
+#[tauri::command]
+fn paper_figure_data_url(
+    state: State<AppState>,
+    paper_id: String,
+    object_id: uuid::Uuid,
+) -> Result<Option<String>, String> {
+    use base64::Engine;
+    let bundle = state.library.lock().unwrap().get(&paper_id).map_err(ui_err)?;
+    let path = bundle.root().join(format!("figures/{object_id}.png"));
+    Ok(std::fs::read(path).ok().map(|bytes| {
+        format!(
+            "data:image/png;base64,{}",
+            base64::engine::general_purpose::STANDARD.encode(&bytes)
+        )
+    }))
+}
+
+/// Create a canvas (registry row + empty Excalidraw scene) and return it.
+#[tauri::command]
+fn workspace_canvas_create(
+    state: State<AppState>,
+    title: Option<String>,
+) -> Result<copilot_core::workspace::WorkspaceItem, String> {
+    with_workspace(&state, |ws| {
+        ws.canvas_create(title.as_deref().unwrap_or("Untitled canvas"))
+    })
+}
+
+#[tauri::command]
+fn workspace_canvas_get(
+    state: State<AppState>,
+    id: uuid::Uuid,
+) -> Result<Option<copilot_core::workspace::CanvasDoc>, String> {
+    with_workspace(&state, |ws| ws.canvas_get(id))
+}
+
+/// Autosave: Excalidraw scene JSON + thumbnail PNG data URL; bumps recency.
+#[tauri::command]
+fn workspace_canvas_save(
+    state: State<AppState>,
+    id: uuid::Uuid,
+    scene: String,
+    thumbnail: String,
+) -> Result<(), String> {
+    with_workspace(&state, |ws| ws.canvas_save(id, &scene, &thumbnail))
+}
+
+/// Reconcile a canvas's pinned-content backlinks with its current scene.
+#[tauri::command]
+fn workspace_canvas_refs_sync(
+    state: State<AppState>,
+    id: uuid::Uuid,
+    pins: Vec<copilot_core::workspace::MentionRef>,
+) -> Result<(), String> {
+    with_workspace(&state, |ws| ws.canvas_sync_refs(id, &pins))
+}
+
+/// AI-proposed canvas edit: the model returns a JSON array of Excalidraw
+/// element skeletons for the instruction, given the scene's structural
+/// summary and (optionally) a PNG of the current board. Streamed as
+/// `ai-stream`; the editor parses, previews via Confirmation, and merges
+/// only on approval — nothing is applied here.
+#[tauri::command(async)]
+fn canvas_ai_edit(
+    app: AppHandle,
+    state: State<AppState>,
+    request_id: String,
+    instruction: String,
+    summary: String,
+    image: Option<copilot_core::ai::ImageAttachment>,
+) -> Result<String, String> {
+    let (provider, config) = pick_provider(
+        &state.providers,
+        copilot_core::ai::ModelClass::Strong,
+    )?;
+    let prompt = format!(
+        "You extend an Excalidraw diagram. The user's instruction: {instruction}\n\n\
+         Current canvas (structural summary):\n{summary}\n\n\
+         Return ONLY a JSON array of Excalidraw element skeletons to ADD (do not \
+         repeat existing elements). Each element is one of:\n\
+         {{\"type\":\"rectangle\",\"x\":<n>,\"y\":<n>,\"width\":<n>,\"height\":<n>,\"label\":{{\"text\":\"…\"}}}}\n\
+         {{\"type\":\"ellipse\",\"x\":<n>,\"y\":<n>,\"width\":<n>,\"height\":<n>,\"label\":{{\"text\":\"…\"}}}}\n\
+         {{\"type\":\"text\",\"x\":<n>,\"y\":<n>,\"text\":\"…\"}}\n\
+         {{\"type\":\"arrow\",\"x\":<n>,\"y\":<n>,\"width\":<n>,\"height\":<n>}}\n\
+         Lay elements out with sensible non-overlapping coordinates. Output only the JSON array."
+    );
+    let images = image.into_iter().collect::<Vec<_>>();
+    let messages = [copilot_core::ai::ChatMessage {
+        images,
+        role: "user".to_string(),
+        content: prompt,
+    }];
+    let emit = |event: AiStreamEvent| {
+        let _ = app.emit("ai-stream", event);
+    };
+    emit(AiStreamEvent {
+        host: Some(config.host()),
+        ..AiStreamEvent::empty(&request_id)
+    });
+    let is_cancelled = || {
+        state
+            .cancelled_requests
+            .lock()
+            .unwrap()
+            .contains(&request_id)
+    };
+    let result = provider.stream_chat_cancellable(
+        &messages,
+        &mut |token| {
+            emit(AiStreamEvent {
+                token: Some(token.to_string()),
+                ..AiStreamEvent::empty(&request_id)
+            });
+        },
+        &is_cancelled,
+    );
+    state.cancelled_requests.lock().unwrap().remove(&request_id);
+    match result {
+        Ok(full) => {
+            emit(AiStreamEvent {
+                done: Some(true),
+                ..AiStreamEvent::empty(&request_id)
+            });
+            Ok(full)
+        }
+        Err(copilot_core::ai::AiError::Cancelled) => {
+            emit(AiStreamEvent {
+                cancelled: Some(true),
+                ..AiStreamEvent::empty(&request_id)
+            });
+            Ok(String::new())
+        }
+        Err(e) => {
+            emit(AiStreamEvent {
+                error: Some(e.to_string()),
+                ..AiStreamEvent::empty(&request_id)
+            });
+            Err(ui_err(e))
+        }
+    }
+}
+
+// ---- Chat threads (chat-threads) ----
+
+/// Fetch a URL's readable text for chat context (cached is a v2 concern;
+/// v1 fetches each send).
+#[tauri::command(async)]
+fn fetch_url_context(url: String) -> Result<String, String> {
+    copilot_core::refs_context::fetch_url_text(&url).map_err(ui_err)
+}
+
+/// Extract text from a raw PDF (not necessarily in the library) for context.
+#[tauri::command(async)]
+fn extract_pdf_text(path: String) -> Result<String, String> {
+    copilot_core::refs_context::extract_pdf_text(std::path::Path::new(&path)).map_err(ui_err)
+}
+
+#[tauri::command]
+fn workspace_chat_create(
+    state: State<AppState>,
+    title: Option<String>,
+) -> Result<copilot_core::workspace::WorkspaceItem, String> {
+    with_workspace(&state, |ws| {
+        ws.chat_create(title.as_deref().unwrap_or("New chat"))
+    })
+}
+
+#[tauri::command]
+fn workspace_chat_messages(
+    state: State<AppState>,
+    chat_id: uuid::Uuid,
+) -> Result<Vec<copilot_core::workspace::ChatMessageRow>, String> {
+    with_workspace(&state, |ws| ws.chat_messages(chat_id))
+}
+
+#[tauri::command]
+fn workspace_chat_edit_message(
+    state: State<AppState>,
+    message_id: uuid::Uuid,
+    content: String,
+) -> Result<(), String> {
+    with_workspace(&state, |ws| ws.chat_edit_message(message_id, &content))
+}
+
+#[tauri::command]
+fn workspace_chat_delete_message(
+    state: State<AppState>,
+    message_id: uuid::Uuid,
+) -> Result<(), String> {
+    with_workspace(&state, |ws| ws.chat_delete_message(message_id))
+}
+
+#[tauri::command]
+fn workspace_chat_refs_sync(
+    state: State<AppState>,
+    id: uuid::Uuid,
+    refs: Vec<copilot_core::workspace::MentionRef>,
+) -> Result<(), String> {
+    with_workspace(&state, |ws| ws.chat_sync_refs(id, &refs))
+}
+
+/// A reference the composer attached, resolved to context text server-side.
+#[derive(serde::Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+enum ChatContextRef {
+    Paper { paper_id: String },
+    Object { paper_id: String, object_id: String },
+    Url { url: String },
+    Pdf { path: String },
+}
+
+/// Resolve one reference to a fenced context block. Failures degrade to a
+/// short note rather than aborting the whole message.
+fn resolve_chat_ref(state: &AppState, r: &ChatContextRef) -> String {
+    match r {
+        ChatContextRef::Paper { paper_id } => {
+            let library = state.library.lock().unwrap();
+            match library.get(paper_id).ok().and_then(|b| b.metadata().ok()) {
+                Some(meta) => format!(
+                    "[paper: {}]\n{}",
+                    meta.paper.title,
+                    meta.paper.abstract_text.unwrap_or_default()
+                ),
+                None => format!("[paper {paper_id}: unavailable]"),
+            }
+        }
+        ChatContextRef::Object { paper_id, object_id } => {
+            let library = state.library.lock().unwrap();
+            let text = library.get(paper_id).ok().and_then(|bundle| {
+                let tree: Option<copilot_core::objects::SemanticTreeDocument> =
+                    bundle.read_derived_json("semantic_tree.json").ok().flatten();
+                tree.and_then(|t| {
+                    t.objects
+                        .into_iter()
+                        .find(|o| o.id.to_string() == *object_id)
+                        .map(|o| o.content.text)
+                })
+            });
+            match text {
+                Some(t) => format!("[object from {paper_id}]\n{t}"),
+                None => format!("[object {object_id}: unavailable]"),
+            }
+        }
+        ChatContextRef::Url { url } => match copilot_core::refs_context::fetch_url_text(url) {
+            Ok(text) => format!("[url: {url}]\n{text}"),
+            Err(e) => format!("[url {url}: {e}]"),
+        },
+        ChatContextRef::Pdf { path } => {
+            match copilot_core::refs_context::extract_pdf_text(std::path::Path::new(path)) {
+                Ok(text) => format!("[pdf: {path}]\n{text}"),
+                Err(e) => format!("[pdf {path}: {e}]"),
+            }
+        }
+    }
+}
+
+/// Stream a chat-thread answer. Assembles context from resolved refs,
+/// records the user turn, streams the assistant turn, and persists it (or an
+/// `incomplete` partial on failure) — the workspace-store analogue of
+/// `ai_stream`. Auto-titles a fresh chat after the first exchange.
+#[tauri::command(async)]
+fn chat_stream(
+    app: AppHandle,
+    state: State<AppState>,
+    request_id: String,
+    chat_id: uuid::Uuid,
+    content: String,
+    refs: Vec<ChatContextRef>,
+    images: Option<Vec<copilot_core::ai::ImageAttachment>>,
+) -> Result<String, String> {
+    let (provider, config) = pick_provider(
+        &state.providers,
+        copilot_core::ai::ModelClass::Strong,
+    )?;
+
+    // Prior turns (persisted) + this user message become the thread.
+    let history = with_workspace(&state, |ws| ws.chat_messages(chat_id))?;
+    let is_first = history.is_empty();
+    let mut messages: Vec<copilot_core::ai::ChatMessage> = history
+        .iter()
+        .map(|m| copilot_core::ai::ChatMessage {
+            images: Vec::new(),
+            role: m.role.clone(),
+            content: m.content.clone(),
+        })
+        .collect();
+
+    // Assemble referenced context as fenced blocks appended to the message.
+    let mut user_content = content.clone();
+    for r in &refs {
+        let block = resolve_chat_ref(state.inner(), r);
+        user_content.push_str(&format!("\n\n---\n{block}\n---"));
+    }
+    let images = images.unwrap_or_default();
+    messages.push(copilot_core::ai::ChatMessage {
+        images: images.clone(),
+        role: "user".to_string(),
+        content: user_content,
+    });
+
+    // Record the user turn (the visible text, not the appended context).
+    with_workspace(&state, |ws| {
+        ws.chat_append_message(chat_id, "user", &content, Some("ask"), false)
+    })?;
+
+    let emit = |event: AiStreamEvent| {
+        let _ = app.emit("ai-stream", event);
+    };
+    emit(AiStreamEvent {
+        host: Some(config.host()),
+        ..AiStreamEvent::empty(&request_id)
+    });
+    let is_cancelled = || {
+        state
+            .cancelled_requests
+            .lock()
+            .unwrap()
+            .contains(&request_id)
+    };
+    let mut accumulated = String::new();
+    let result = provider.stream_chat_cancellable(
+        &messages,
+        &mut |token| {
+            accumulated.push_str(token);
+            emit(AiStreamEvent {
+                token: Some(token.to_string()),
+                ..AiStreamEvent::empty(&request_id)
+            });
+        },
+        &is_cancelled,
+    );
+    state.cancelled_requests.lock().unwrap().remove(&request_id);
+
+    match result {
+        Ok(full) => {
+            with_workspace(&state, |ws| {
+                ws.chat_append_message(chat_id, "assistant", &full, None, false)
+            })?;
+            emit(AiStreamEvent {
+                done: Some(true),
+                ..AiStreamEvent::empty(&request_id)
+            });
+            if is_first {
+                auto_title_chat(state.inner(), chat_id, &content, &full);
+            }
+            Ok(full)
+        }
+        Err(copilot_core::ai::AiError::Cancelled) => {
+            if !accumulated.is_empty() {
+                let _ = with_workspace(&state, |ws| {
+                    ws.chat_append_message(chat_id, "assistant", &accumulated, None, true)
+                });
+            }
+            emit(AiStreamEvent {
+                cancelled: Some(true),
+                ..AiStreamEvent::empty(&request_id)
+            });
+            Ok(accumulated)
+        }
+        Err(e) => {
+            if !accumulated.is_empty() {
+                let _ = with_workspace(&state, |ws| {
+                    ws.chat_append_message(chat_id, "assistant", &accumulated, None, true)
+                });
+            }
+            emit(AiStreamEvent {
+                error: Some(e.to_string()),
+                ..AiStreamEvent::empty(&request_id)
+            });
+            Err(ui_err(e))
+        }
+    }
+}
+
+/// Best-effort chat title from the first exchange (Light tier). Silent on
+/// failure — the truncated first message already serves as a fallback title.
+fn auto_title_chat(state: &AppState, chat_id: uuid::Uuid, question: &str, answer: &str) {
+    let title = (|| {
+        let (provider, _) =
+            pick_provider(&state.providers, copilot_core::ai::ModelClass::Light).ok()?;
+        let messages = [copilot_core::ai::ChatMessage {
+            images: Vec::new(),
+            role: "user".to_string(),
+            content: format!(
+                "Give a 3-6 word title (no quotes, no punctuation at the end) for this chat:\nQ: {}\nA: {}",
+                question.chars().take(400).collect::<String>(),
+                answer.chars().take(400).collect::<String>(),
+            ),
+        }];
+        provider.stream_chat(&messages, &mut |_| {}).ok()
+    })();
+    let title = title
+        .map(|t| t.trim().trim_matches('"').chars().take(80).collect::<String>())
+        .filter(|t| !t.is_empty())
+        .unwrap_or_else(|| question.chars().take(60).collect());
+    let guard = state.workspace.lock().unwrap();
+    if let Ok(ws) = guard.as_ref() {
+        let _ = ws.chat_set_title(chat_id, &title);
+    }
+}
+
+/// AI assist inside the note editor: one-shot instruction over selected
+/// text, streamed as `ai-stream` events (same contract the reader uses).
+/// Nothing is persisted — the editor owns accept/discard.
+#[tauri::command(async)]
+fn note_ai(
+    app: AppHandle,
+    state: State<AppState>,
+    request_id: String,
+    action: String,
+    text: String,
+) -> Result<String, String> {
+    let (provider, config) = pick_provider(
+        &state.providers,
+        copilot_core::ai::ModelClass::Strong,
+    )?;
+    let instruction = match action.as_str() {
+        "improve" => "Rewrite the following note text to be clearer and better written. Keep the meaning, keep markdown formatting. Output only the rewritten text.",
+        "summarize" => "Summarize the following note text concisely in markdown. Output only the summary.",
+        "expand" => "Expand the following note text with more depth and detail, in the same voice. Output only the expanded text.",
+        _ => "Continue writing from the following note text, matching its tone and formatting. Output only the continuation.",
+    };
+    let messages = [copilot_core::ai::ChatMessage {
+        images: Vec::new(),
+        role: "user".to_string(),
+        content: format!("{instruction}\n\n---\n{text}"),
+    }];
+    let emit = |event: AiStreamEvent| {
+        let _ = app.emit("ai-stream", event);
+    };
+    emit(AiStreamEvent {
+        host: Some(config.host()),
+        ..AiStreamEvent::empty(&request_id)
+    });
+    let is_cancelled = || {
+        state
+            .cancelled_requests
+            .lock()
+            .unwrap()
+            .contains(&request_id)
+    };
+    let result = provider.stream_chat_cancellable(
+        &messages,
+        &mut |token| {
+            emit(AiStreamEvent {
+                token: Some(token.to_string()),
+                ..AiStreamEvent::empty(&request_id)
+            });
+        },
+        &is_cancelled,
+    );
+    state.cancelled_requests.lock().unwrap().remove(&request_id);
+    match result {
+        Ok(full) => {
+            emit(AiStreamEvent {
+                done: Some(true),
+                ..AiStreamEvent::empty(&request_id)
+            });
+            Ok(full)
+        }
+        Err(copilot_core::ai::AiError::Cancelled) => {
+            emit(AiStreamEvent {
+                cancelled: Some(true),
+                ..AiStreamEvent::empty(&request_id)
+            });
+            Ok(String::new())
+        }
+        Err(e) => {
+            emit(AiStreamEvent {
+                error: Some(e.to_string()),
+                ..AiStreamEvent::empty(&request_id)
+            });
+            Err(ui_err(e))
+        }
+    }
+}
+
+/// Backlinks: which workspace entities reference this paper.
+#[tauri::command]
+fn workspace_refs_to_paper(
+    state: State<AppState>,
+    paper_id: String,
+) -> Result<Vec<copilot_core::workspace::WorkspaceRef>, String> {
+    with_workspace(&state, |ws| ws.refs_to_paper(&paper_id))
+}
+
+/// Export every live workspace entity to a directory; returns kind→count.
+#[tauri::command]
+fn workspace_export_all(
+    state: State<AppState>,
+    dir: String,
+) -> Result<Vec<(String, usize)>, String> {
+    with_workspace(&state, |ws| ws.export_all(std::path::Path::new(&dir)))
+}
+
+/// Per-stage pipeline state for a paper, read from bundle metadata — the
+/// import-progress UI shows this after view switches and app restarts.
+#[tauri::command]
+fn pipeline_status(
+    state: State<AppState>,
+    paper_id: String,
+) -> Result<Vec<copilot_core::pipeline::StageStatus>, String> {
+    let library = state.library.lock().unwrap();
+    let bundle = library.get(&paper_id).map_err(ui_err)?;
+    Ok(copilot_core::pipeline::status_snapshot(&bundle))
+}
+
+/// Re-run the ingestion pipeline. Stages recorded complete at their current
+/// version are skipped, so this is the "re-run the failed stage" action —
+/// deterministic and idempotent.
+#[tauri::command(async)]
+fn retry_ingestion(
+    app: AppHandle,
+    state: State<AppState>,
+    paper_id: String,
+) -> Result<(), String> {
+    let bundle_root = {
+        let library = state.library.lock().unwrap();
+        library.bundle_path(&paper_id)
+    };
+    spawn_ingestion(app, paper_id, bundle_root);
+    Ok(())
 }
 
 /// A paper's links, both directions ("links out" / "links here").
@@ -457,6 +1344,81 @@ fn pick_provider(
     )
 }
 
+/// Which provider/model answers chat right now (mirrors pick_provider's
+/// selection for the strong tier — what "Ask" actually uses).
+#[derive(serde::Serialize)]
+struct ActiveModelView {
+    provider: String,
+    model: String,
+    host: String,
+}
+
+#[tauri::command]
+fn active_model(state: State<AppState>) -> Result<ActiveModelView, String> {
+    let (_, config) = pick_provider(&state.providers, copilot_core::ai::ModelClass::Strong)?;
+    Ok(ActiveModelView {
+        provider: config.protocol.id().to_string(),
+        model: config.model_for(copilot_core::ai::ModelClass::Strong),
+        host: config.host(),
+    })
+}
+
+/// Read a user-picked file for chat attachment: images return base64 +
+/// mime; text files return clamped UTF-8 (context blocks). Binary
+/// non-image files are refused with a clear message.
+#[derive(serde::Serialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+enum AttachmentView {
+    Image {
+        media_type: String,
+        data_b64: String,
+    },
+    Text {
+        name: String,
+        content: String,
+        truncated: bool,
+    },
+}
+
+#[tauri::command]
+fn load_attachment(path: String) -> Result<AttachmentView, String> {
+    const TEXT_CAP: usize = 60_000;
+    let bytes = std::fs::read(&path).map_err(|e| format!("could not read {path}: {e}"))?;
+    let name = std::path::Path::new(&path)
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| "file".into());
+    let ext = name.rsplit('.').next().unwrap_or("").to_lowercase();
+    let image_mime = match ext.as_str() {
+        "png" => Some("image/png"),
+        "jpg" | "jpeg" => Some("image/jpeg"),
+        "gif" => Some("image/gif"),
+        "webp" => Some("image/webp"),
+        _ => None,
+    };
+    if let Some(media_type) = image_mime {
+        use base64::Engine;
+        return Ok(AttachmentView::Image {
+            media_type: media_type.to_string(),
+            data_b64: base64::engine::general_purpose::STANDARD.encode(&bytes),
+        });
+    }
+    match String::from_utf8(bytes) {
+        Ok(text) => {
+            let truncated = text.len() > TEXT_CAP;
+            let content = text.chars().take(TEXT_CAP).collect();
+            Ok(AttachmentView::Text {
+                name,
+                content,
+                truncated,
+            })
+        }
+        Err(_) => Err(format!(
+            "{name} is binary — attach images (png/jpg/gif/webp) or text files"
+        )),
+    }
+}
+
 /// Stream an AI action anchored to an object. Tokens arrive as `ai-stream`
 /// events tagged with `request_id`; the full text is also returned.
 ///
@@ -477,6 +1439,8 @@ fn ai_stream(
     // Set for ad-hoc selections (text drag / region marquee): the gathered
     // text becomes the anchor instead of an extracted object.
     adhoc_text: Option<String>,
+    // Inline image attachments (screenshots, figures) for multimodal models.
+    images: Option<Vec<copilot_core::ai::ImageAttachment>>,
 ) -> Result<String, String> {
     let bundle = state
         .library
@@ -548,7 +1512,7 @@ fn ai_stream(
             ))
         }
     };
-    let context = match &adhoc_text {
+    let mut context = match &adhoc_text {
         Some(text) => copilot_core::context::assemble_adhoc(
             &title,
             text,
@@ -633,10 +1597,28 @@ fn ai_stream(
     {
         let _ = state.telemetry.record("explanation_repeated");
     }
-    let user_turn = copilot_core::chat::user_message(
-        &action_name,
-        question.clone().unwrap_or_else(|| action_name.clone()),
-    );
+    // Attachments: send with THIS request's user message, and keep copies
+    // in the bundle so the conversation stays self-contained.
+    let images = images.unwrap_or_default();
+    let mut question_text = question.clone().unwrap_or_else(|| action_name.clone());
+    if !images.is_empty() {
+        let dir = bundle.root().join("chats/attachments");
+        std::fs::create_dir_all(&dir).map_err(ui_err)?;
+        for image in &images {
+            let ext = image.media_type.rsplit('/').next().unwrap_or("png");
+            let name = format!("{}.{ext}", uuid::Uuid::new_v4());
+            use base64::Engine;
+            let bytes = base64::engine::general_purpose::STANDARD
+                .decode(&image.data_b64)
+                .map_err(|e| format!("bad attachment encoding: {e}"))?;
+            std::fs::write(dir.join(&name), bytes).map_err(ui_err)?;
+            question_text.push_str(&format!("\n[attached image: chats/attachments/{name}]"));
+        }
+        if let Some(last_user) = context.messages.iter_mut().rev().find(|m| m.role == "user") {
+            last_user.images = images.clone();
+        }
+    }
+    let user_turn = copilot_core::chat::user_message(&action_name, question_text);
     copilot_core::chat::append(&bundle, object_id, &user_turn).map_err(ui_err)?;
 
     let emit = |event: AiStreamEvent| {
@@ -785,6 +1767,7 @@ fn implementation_generate(
     let llm = |prompt: &str| -> Option<String> {
         let (provider, _) = pick_provider(&store, copilot_core::ai::ModelClass::Strong).ok()?;
         let messages = [copilot_core::ai::ChatMessage {
+            images: Vec::new(),
             role: "user".to_string(),
             content: prompt.to_string(),
         }];
@@ -2550,6 +3533,7 @@ fn gaps_generate(state: State<AppState>) -> Result<copilot_core::gaps::GapReport
         provider
             .stream_chat(
                 &[copilot_core::ai::ChatMessage {
+                    images: Vec::new(),
                     role: "user".into(),
                     content: prompt.into(),
                 }],
@@ -2604,6 +3588,7 @@ fn strong_llm_cancellable<'a>(
         let (provider, _) =
             pick_provider(&state.providers, copilot_core::ai::ModelClass::Strong).ok()?;
         let messages = [copilot_core::ai::ChatMessage {
+            images: Vec::new(),
             role: "user".to_string(),
             content: prompt.to_string(),
         }];
@@ -3100,6 +4085,7 @@ fn repro_advance(
             provider
                 .stream_chat(
                     &[copilot_core::ai::ChatMessage {
+                        images: Vec::new(),
                         role: "user".into(),
                         content: prompt.into(),
                     }],
@@ -3946,6 +4932,7 @@ fn spawn_episode_summary(app: &AppHandle, paper_id: String, object_id: uuid::Uui
         let llm = move |prompt: &str| {
             let (provider, _) = pick_provider(&store, copilot_core::ai::ModelClass::Light).ok()?;
             let messages = [copilot_core::ai::ChatMessage {
+                images: Vec::new(),
                 role: "user".to_string(),
                 content: prompt.to_string(),
             }];
@@ -4091,6 +5078,7 @@ fn strong_llm(state: &AppState) -> impl Fn(&str) -> Option<String> {
     move |prompt: &str| {
         let (provider, _) = pick_provider(&store, copilot_core::ai::ModelClass::Strong).ok()?;
         let messages = [copilot_core::ai::ChatMessage {
+            images: Vec::new(),
             role: "user".to_string(),
             content: prompt.to_string(),
         }];
@@ -4329,6 +5317,7 @@ fn tutor_stream(
     // a crash never loses the learner's answer.
     let history = copilot_core::chat::history(&bundle, node).map_err(ui_err)?;
     let mut messages = vec![copilot_core::ai::ChatMessage {
+        images: Vec::new(),
         role: "system".to_string(),
         content: system,
     }];
@@ -4342,6 +5331,7 @@ fn tutor_stream(
             )
             .map_err(ui_err)?;
             messages.push(copilot_core::ai::ChatMessage {
+                images: Vec::new(),
                 role: "user".to_string(),
                 content: attempt.clone(),
             });
@@ -4349,6 +5339,7 @@ fn tutor_stream(
     }
     if messages.last().map(|m| m.role.as_str()) != Some("user") {
         messages.push(copilot_core::ai::ChatMessage {
+            images: Vec::new(),
             role: "user".to_string(),
             content: "(begin)".to_string(),
         });
@@ -4812,6 +5803,7 @@ fn pipeline_options(state: &AppState) -> PipelineOptions {
             let (provider, _config) =
                 pick_provider(&store, copilot_core::ai::ModelClass::Light).ok()?;
             let messages = [copilot_core::ai::ChatMessage {
+                images: Vec::new(),
                 role: "user".to_string(),
                 content: prompt.to_string(),
             }];
@@ -4971,8 +5963,11 @@ pub fn run() {
             let providers = copilot_core::provider_config::ProviderStore::new(
                 &app.path().app_config_dir().expect("no app config dir"),
             )?;
+            let workspace = copilot_core::workspace::WorkspaceStore::open(&library_root)
+                .map_err(|e| e.to_string());
             app.manage(AppState {
                 library: Mutex::new(library),
+                workspace: Mutex::new(workspace),
                 embedder: Mutex::new(None),
                 telemetry,
                 providers,
@@ -5004,6 +5999,8 @@ pub fn run() {
             ai_set_key,
             ai_delete_key,
             ai_stream,
+            active_model,
+            load_attachment,
             ai_cancel,
             provider_configs,
             provider_presets,
@@ -5028,6 +6025,34 @@ pub fn run() {
             read_artifact,
             import_pdf_file,
             import_url,
+            paper_markdown,
+            paper_markdown_clean,
+            pipeline_status,
+            retry_ingestion,
+            workspace_items_list,
+            workspace_item_rename,
+            workspace_item_delete,
+            workspace_refs_to_paper,
+            workspace_export_all,
+            workspace_note_create,
+            workspace_note_get,
+            workspace_note_save,
+            workspace_note_refs_sync,
+            note_ai,
+            paper_figure_data_url,
+            workspace_canvas_create,
+            workspace_canvas_get,
+            workspace_canvas_save,
+            workspace_canvas_refs_sync,
+            canvas_ai_edit,
+            fetch_url_context,
+            extract_pdf_text,
+            workspace_chat_create,
+            workspace_chat_messages,
+            workspace_chat_edit_message,
+            workspace_chat_delete_message,
+            workspace_chat_refs_sync,
+            chat_stream,
             delete_paper,
             paper_toggle_star,
             paper_set_priority,

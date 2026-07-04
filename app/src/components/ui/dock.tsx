@@ -20,6 +20,8 @@ export interface DockProps extends VariantProps<typeof dockVariants> {
   disableMagnification?: boolean
   iconDistance?: number
   direction?: "top" | "middle" | "bottom"
+  /** Animate size changes (e.g. collapsing icon groups) via motion layout. */
+  layout?: boolean
   children: React.ReactNode
 }
 
@@ -42,18 +44,21 @@ const Dock = React.forwardRef<HTMLDivElement, DockProps>(
       disableMagnification = DEFAULT_DISABLEMAGNIFICATION,
       iconDistance = DEFAULT_DISTANCE,
       direction = "middle",
+      layout,
       ...props
     },
     ref
   ) => {
     const mouseX = useMotionValue(Infinity)
 
-    const renderChildren = () => {
-      return React.Children.map(children, (child) => {
-        if (
-          React.isValidElement<DockIconProps>(child) &&
-          child.type === DockIcon
-        ) {
+    // Recurses into fragments and wrapper elements (e.g. a collapsible
+    // `display: contents` group) so nested icons still receive dock props.
+    const mapChildren = (nodes: React.ReactNode): React.ReactNode =>
+      React.Children.map(nodes, (child) => {
+        if (!React.isValidElement<DockIconProps>(child)) {
+          return child
+        }
+        if (child.type === DockIcon) {
           return React.cloneElement(child, {
             ...child.props,
             mouseX: mouseX,
@@ -63,13 +68,22 @@ const Dock = React.forwardRef<HTMLDivElement, DockProps>(
             distance: iconDistance,
           })
         }
-        return child
+        const inner = (child.props as { children?: React.ReactNode }).children
+        if (inner === undefined || inner === null) {
+          return child
+        }
+        if (child.type === React.Fragment) {
+          return mapChildren(inner)
+        }
+        return React.cloneElement(child, undefined, mapChildren(inner))
       })
-    }
+
+    const renderChildren = () => mapChildren(children)
 
     return (
       <motion.div
         ref={ref}
+        layout={layout}
         onMouseMove={(e) => mouseX.set(e.pageX)}
         onMouseLeave={() => mouseX.set(Infinity)}
         {...props}

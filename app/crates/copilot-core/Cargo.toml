@@ -26,11 +26,20 @@ rusqlite = { version = "0.37", features = ["bundled"], optional = true }
 argon2 = "0.5.3"
 hmac = "0.12"
 chacha20poly1305 = "0.10"
+# Pure-Rust; used to decode stored canvas thumbnail data URLs on export.
+base64 = "0.22.1"
 schemars.workspace = true
 jsonschema = { version = "0.46.9", default-features = false }
 ed25519-dalek = { version = "2.2.0", features = ["rand_core"] }
 tar = "0.4.46"
 wasmtime = { version = "45.0.3", default-features = false, features = ["runtime", "cranelift", "wat"], optional = true }
+
+# Apple Silicon: run the embedding model on the GPU (Metal). Additive,
+# target-gated feature — Linux/Windows builds are untouched, and the code
+# falls back to CPU when no Metal device is available at runtime.
+[target.'cfg(target_os = "macos")'.dependencies]
+candle-core = { version = "0.9", optional = true, features = ["metal"] }
+candle-nn = { version = "0.9", optional = true, features = ["metal"] }
 
 [features]
 default = ["native"]

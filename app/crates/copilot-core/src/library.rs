@@ -144,7 +144,16 @@ impl Library {
 
         let mut status = IngestionStatus::Ready;
         let stages = &metadata.pipeline.stages;
-        if stages.is_empty() {
+        // A stage that is mid-run has no record yet — only counting recorded
+        // stages would read "Ready" while e.g. the concept map still builds.
+        const EXPECTED_STAGES: [&str; 5] = [
+            "layout",
+            "objects",
+            "enrichment_parsing",
+            "concepts",
+            "embeddings",
+        ];
+        if EXPECTED_STAGES.iter().any(|key| !stages.contains_key(*key)) {
             status = IngestionStatus::Processing;
         }
         for (name, record) in stages {

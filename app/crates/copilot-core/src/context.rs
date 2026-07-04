@@ -128,11 +128,13 @@ pub fn assemble_adhoc(
     }
 
     let mut messages = vec![ChatMessage {
+        images: Vec::new(),
         role: "system".to_string(),
         content: SYSTEM_PREAMBLE.to_string(),
     }];
     messages.extend(kept_thread);
     messages.push(ChatMessage {
+        images: Vec::new(),
         role: "user".to_string(),
         content: user_content,
     });
@@ -241,11 +243,13 @@ pub fn assemble(
     }
 
     let mut messages = vec![ChatMessage {
+        images: Vec::new(),
         role: "system".to_string(),
         content: SYSTEM_PREAMBLE.to_string(),
     }];
     messages.extend(kept_thread);
     messages.push(ChatMessage {
+        images: Vec::new(),
         role: "user".to_string(),
         content: user_content,
     });
@@ -599,11 +603,13 @@ pub fn assemble_graph(
     }
 
     let mut messages = vec![ChatMessage {
+        images: Vec::new(),
         role: "system".to_string(),
         content: SYSTEM_PREAMBLE.to_string(),
     }];
     messages.extend(kept_thread);
     messages.push(ChatMessage {
+        images: Vec::new(),
         role: "user".to_string(),
         content: user_content,
     });
@@ -716,11 +722,13 @@ pub fn assemble_experiment(
     }
 
     let mut messages = vec![ChatMessage {
+        images: Vec::new(),
         role: "system".to_string(),
         content: SYSTEM_PREAMBLE.to_string(),
     }];
     messages.extend(kept_thread);
     messages.push(ChatMessage {
+        images: Vec::new(),
         role: "user".to_string(),
         content: user_content,
     });
@@ -801,11 +809,13 @@ pub fn assemble_card(
         user_content.push_str(&format!("Reader's question: {question}\n"));
     }
     let mut messages = vec![ChatMessage {
+        images: Vec::new(),
         role: "system".to_string(),
         content: SYSTEM_PREAMBLE.to_string(),
     }];
     messages.extend(kept_thread);
     messages.push(ChatMessage {
+        images: Vec::new(),
         role: "user".to_string(),
         content: user_content,
     });
@@ -951,6 +961,7 @@ mod tests {
         let (tree, fig_id, _) = figure_with_equation();
         let thread: Vec<ChatMessage> = (0..30)
             .map(|i| ChatMessage {
+                images: Vec::new(),
                 role: if i % 2 == 0 { "user" } else { "assistant" }.to_string(),
                 content: format!("message {i} {}", "x".repeat(400)),
             })
@@ -1248,6 +1259,7 @@ mod tests {
         };
         let thread: Vec<ChatMessage> = (0..20)
             .map(|i| ChatMessage {
+                images: Vec::new(),
                 role: if i % 2 == 0 { "user" } else { "assistant" }.to_string(),
                 content: format!("message {i} {}", "x".repeat(400)),
             })

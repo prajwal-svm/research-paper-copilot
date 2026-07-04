@@ -6,6 +6,8 @@ import {
   ChevronRightIcon,
   ExternalLinkIcon,
   GraduationCapIcon,
+  HighlighterIcon,
+  TextQuoteIcon,
   XCircleIcon,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +25,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { MessageResponse } from "@/components/ai-elements/message";
 import ObjectLinkedText from "./ai/ObjectLinkedText";
+import type { Note } from "./Annotations";
 
 interface LessonEntry {
   node: string;
@@ -80,15 +83,24 @@ const cursorKey = (paperId: string) => `rpc-lesson-cursor-${paperId}`;
 export default function ReadingMode({
   paperId,
   labelFor,
+  notes,
   onEscapeToObject,
   onNavigateObject,
+  onHighlight,
+  onQuote,
 }: {
   paperId: string;
   labelFor: (objectId: string) => string | undefined;
+  /** Paper notes — lesson highlights live here, anchored to concept objects. */
+  notes: Note[];
   /** Escape hatch: leave reading mode and open the paper at this object. */
   onEscapeToObject: (objectId: string) => void;
   /** Follow an inline [[object:…]] reference without leaving the mode. */
   onNavigateObject: (objectId: string) => void;
+  /** Persist selected lesson text as a highlight note on the anchor object. */
+  onHighlight: (text: string, anchorObjectId: string) => void;
+  /** Open the anchored chat with the selected text as quoted context. */
+  onQuote: (text: string) => void;
 }) {
   const [sequence, setSequence] = useState<LessonEntry[] | null>(null);
   const [dueNodes, setDueNodes] = useState<Set<string>>(new Set());
@@ -193,10 +205,13 @@ export default function ReadingMode({
         paperId={paperId}
         entry={active}
         labelFor={labelFor}
+        notes={notes}
         onNavigateObject={onNavigateObject}
         onEscapeToObject={onEscapeToObject}
         onMasteryChanged={refreshSequence}
         onNext={cursor < sequence.length - 1 ? () => setCursor(cursor + 1) : undefined}
+        onHighlight={onHighlight}
+        onQuote={onQuote}
       />
     </div>
   );
@@ -208,18 +223,24 @@ function LessonPlayer({
   paperId,
   entry,
   labelFor,
+  notes,
   onNavigateObject,
   onEscapeToObject,
   onMasteryChanged,
   onNext,
+  onHighlight,
+  onQuote,
 }: {
   paperId: string;
   entry: LessonEntry;
   labelFor: (objectId: string) => string | undefined;
+  notes: Note[];
   onNavigateObject: (objectId: string) => void;
   onEscapeToObject: (objectId: string) => void;
   onMasteryChanged: () => void;
   onNext?: () => void;
+  onHighlight: (text: string, anchorObjectId: string) => void;
+  onQuote: (text: string) => void;
 }) {
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [generating, setGenerating] = useState(true);
@@ -228,6 +249,99 @@ function LessonPlayer({
   const [deck, setDeck] = useState<FlashcardDeck | null>(null);
   const [deckLoading, setDeckLoading] = useState(false);
   const [practiceNotice, setPracticeNotice] = useState<string | null>(null);
+
+  // Select-to-act: a small floating toolbar (Highlight / Quote in chat)
+  // appears over any text selection inside the lesson content.
+  const contentRef = useRef<HTMLDivElement | null>(null);
+  const [selectionBar, setSelectionBar] = useState<{
+    x: number;
+    y: number;
+    text: string;
+  } | null>(null);
+
+  function onContentMouseUp() {
+    const selection = window.getSelection();
+    const container = contentRef.current;
+    if (!selection || selection.isCollapsed || !container) {
+      setSelectionBar(null);
+      return;
+    }
+    const text = selection.toString().trim();
+    if (!text || !container.contains(selection.anchorNode)) {
+      setSelectionBar(null);
+      return;
+    }
+    const rect = selection.getRangeAt(0).getBoundingClientRect();
+    const base = container.getBoundingClientRect();
+    setSelectionBar({
+      x: rect.left - base.left + rect.width / 2,
+      y: rect.top - base.top,
+      text,
+    });
+  }
+
+  const highlights = notes.filter(
+    (n) => entry.object_ids.includes(n.object_id) && n.markdown.startsWith("> "),
+  );
+
+  // Paint saved highlights inline (light yellow) over the rendered lesson
+  // via the CSS Custom Highlight API — no DOM surgery, so the markdown
+  // renders untouched. Selector: ::highlight(lesson-highlights).
+  useEffect(() => {
+    const container = contentRef.current;
+    const registry = (CSS as unknown as { highlights?: Map<string, unknown> })
+      .highlights;
+    const HighlightCtor = (
+      window as unknown as { Highlight?: new (...ranges: Range[]) => unknown }
+    ).Highlight;
+    if (!container || !registry || !HighlightCtor) return;
+
+    const texts = highlights
+      .map((h) => h.markdown.replace(/^> /, "").trim())
+      .filter((t) => t.length > 0);
+    registry.delete("lesson-highlights");
+    if (texts.length === 0) return;
+
+    // Full rendered text + per-node offsets, so matches can span elements.
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+    const nodes: { node: Text; start: number }[] = [];
+    let full = "";
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      nodes.push({ node: n as Text, start: full.length });
+      full += n.textContent ?? "";
+    }
+    const locate = (offset: number) => {
+      for (let i = nodes.length - 1; i >= 0; i--) {
+        if (offset >= nodes[i].start) {
+          return { node: nodes[i].node, offset: offset - nodes[i].start };
+        }
+      }
+      return null;
+    };
+    const ranges: Range[] = [];
+    for (const text of texts) {
+      let from = 0;
+      for (;;) {
+        const at = full.indexOf(text, from);
+        if (at === -1) break;
+        const start = locate(at);
+        const end = locate(at + text.length);
+        if (start && end) {
+          const range = new Range();
+          range.setStart(start.node, start.offset);
+          range.setEnd(end.node, end.offset);
+          ranges.push(range);
+        }
+        from = at + text.length;
+      }
+    }
+    if (ranges.length > 0) {
+      registry.set("lesson-highlights", new HighlightCtor(...ranges));
+    }
+    return () => {
+      registry.delete("lesson-highlights");
+    };
+  }, [highlights, lesson]);
 
   // Lazy generation: cached lessons return instantly; first generation shows
   // a skeleton while navigation stays fully responsive.
@@ -291,11 +405,53 @@ function LessonPlayer({
         </div>
 
         {lesson ? (
-          <ObjectLinkedText
-            text={lesson.content}
-            labelFor={labelFor}
-            onNavigate={onNavigateObject}
-          />
+          <div className="relative" ref={contentRef} onMouseUp={onContentMouseUp}>
+            <ObjectLinkedText
+              text={lesson.content}
+              labelFor={labelFor}
+              onNavigate={onNavigateObject}
+            />
+            {selectionBar && (
+              <div
+                className="absolute z-20 flex -translate-x-1/2 -translate-y-full gap-0.5 rounded-md border bg-background p-0.5 shadow-md"
+                style={{
+                  left: selectionBar.x,
+                  top: Math.max(0, selectionBar.y - 6),
+                }}
+                // Without this, mousedown collapses the selection, the bar
+                // unmounts, and the click never lands — "highlight does
+                // nothing".
+                onMouseDown={(e) => e.preventDefault()}
+              >
+                {anchor && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      onHighlight(selectionBar.text, anchor);
+                      setSelectionBar(null);
+                      window.getSelection()?.removeAllRanges();
+                    }}
+                  >
+                    <HighlighterIcon data-icon="inline-start" />
+                    Highlight
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    onQuote(selectionBar.text);
+                    setSelectionBar(null);
+                    window.getSelection()?.removeAllRanges();
+                  }}
+                >
+                  <TextQuoteIcon data-icon="inline-start" />
+                  Quote in chat
+                </Button>
+              </div>
+            )}
+          </div>
         ) : generating ? (
           <div className="flex flex-col gap-2">
             <Skeleton className="h-4 w-3/4" />
@@ -320,6 +476,20 @@ function LessonPlayer({
             {entry.description && (
               <p className="text-sm">{entry.description}</p>
             )}
+          </div>
+        )}
+
+        {highlights.length > 0 && (
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs text-muted-foreground">Your highlights</span>
+            {highlights.map((highlight) => (
+              <p
+                key={highlight.note_id}
+                className="rounded-md border-l-2 border-yellow-300 bg-yellow-200/25 px-2.5 py-1.5 text-sm"
+              >
+                {highlight.markdown.replace(/^> /, "")}
+              </p>
+            ))}
           </div>
         )}
 

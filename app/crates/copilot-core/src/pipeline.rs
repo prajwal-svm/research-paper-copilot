@@ -1,11 +1,13 @@
 //! Ingestion job runner: ordered stages, resumable, per-stage progress.
 //!
 //! Stages: layout → objects → enrichment (equations, figures/tables,
-//! citations) → embeddings. Each stage records completion in
-//! `metadata.json.pipeline.stages`; a rerun skips stages whose recorded
-//! status is `complete` at the current `pipeline_version`, which is what
-//! makes interrupted ingestion resumable — quit during enrichment, relaunch,
-//! and only enrichment onward runs again.
+//! citations) → concepts → embeddings. Concepts (the knowledge graph) runs
+//! before embeddings so the reader's graph view is usable immediately,
+//! independent of the slower, network-sensitive embeddings stage. Each stage
+//! records completion in `metadata.json.pipeline.stages`; a rerun skips
+//! stages whose recorded status is `complete` at the current
+//! `pipeline_version`, which is what makes interrupted ingestion resumable —
+//! quit during enrichment, relaunch, and only enrichment onward runs again.
 //!
 //! The runner itself is synchronous; `spawn` runs it on a background thread
 //! and streams [`ProgressEvent`]s over a channel (the Tauri shell forwards
@@ -33,8 +35,8 @@ impl Stage {
         Stage::Layout,
         Stage::Objects,
         Stage::Enrichment,
-        Stage::Embeddings,
         Stage::Concepts,
+        Stage::Embeddings,
     ];
 
     /// Key in `metadata.json.pipeline.stages`.
@@ -80,6 +82,14 @@ pub enum ProgressEvent {
     StageFailed {
         stage: Stage,
         reason: String,
+    },
+    /// Intra-stage progress for long stages (embeddings): objects processed
+    /// so far out of `total`. Emitted between `StageStarted` and
+    /// `StageCompleted`/`StageFailed`; recipients may ignore it.
+    StageProgress {
+        stage: Stage,
+        done: usize,
+        total: usize,
     },
     PipelineFinished {
         usable: bool,
@@ -127,6 +137,54 @@ fn stage_is_current(bundle: &Bundle, stage: Stage) -> bool {
     record["status"] == "complete" && record["pipeline_version"] == stage.current_version()
 }
 
+/// One stage's recorded state, for the import-progress UI.
+#[derive(Debug, Clone, Serialize)]
+pub struct StageStatus {
+    pub stage: Stage,
+    /// `pending` (never ran / stale version), or the recorded status
+    /// (`complete`, `failed`, `running`, …) passed through as-is.
+    pub status: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+}
+
+/// Per-stage pipeline state read from bundle metadata — survives app
+/// restarts and view switches; live progress comes from events instead.
+pub fn status_snapshot(bundle: &Bundle) -> Vec<StageStatus> {
+    let metadata = bundle.metadata().ok();
+    Stage::ALL
+        .iter()
+        .map(|&stage| {
+            let record = metadata
+                .as_ref()
+                .and_then(|m| m.pipeline.stages.get(stage.metadata_key()));
+            let (status, reason) = match record {
+                None => ("pending".to_string(), None),
+                Some(r) => {
+                    let recorded = r["status"].as_str().unwrap_or("pending");
+                    let reason = r["failure_reason"]
+                        .as_str()
+                        .or_else(|| r["degraded_reason"].as_str())
+                        .map(str::to_string);
+                    if recorded == "complete"
+                        && r["pipeline_version"] != stage.current_version()
+                    {
+                        // A version bump means a rerun would redo this stage.
+                        ("pending".to_string(), None)
+                    } else {
+                        (recorded.to_string(), reason)
+                    }
+                }
+            };
+            StageStatus {
+                stage,
+                status,
+                reason,
+            }
+        })
+        .collect()
+}
+
 /// Record a stage failure in metadata without aborting the pipeline.
 fn record_failure(bundle: &Bundle, stage: Stage, reason: &str) {
     if let Ok(mut metadata) = bundle.metadata() {
@@ -156,6 +214,19 @@ pub fn run(
 
     for stage in Stage::ALL {
         if stage == Stage::Embeddings && options.skip_embeddings {
+            // Record the skip so the library never reads this paper as
+            // still-processing (missing record == mid-run).
+            if let Ok(mut metadata) = bundle.metadata() {
+                metadata.pipeline.stages.insert(
+                    stage.metadata_key().to_string(),
+                    serde_json::json!({
+                        "pipeline_version": stage.current_version(),
+                        "status": "skipped",
+                        "completed_at": crate::bundle::now_rfc3339(),
+                    }),
+                );
+                let _ = bundle.write_metadata(&metadata);
+            }
             progress(ProgressEvent::StageSkipped { stage });
             continue;
         }
@@ -205,7 +276,15 @@ pub fn run(
                 }
             }
             Stage::Embeddings => crate::embeddings::Embedder::load()
-                .and_then(|embedder| crate::embeddings::run_embeddings_stage(bundle, &embedder))
+                .and_then(|embedder| {
+                    crate::embeddings::run_embeddings_stage(bundle, &embedder, |done, total| {
+                        progress(ProgressEvent::StageProgress {
+                            stage: Stage::Embeddings,
+                            done,
+                            total,
+                        });
+                    })
+                })
                 .map(|_| None)
                 .map_err(|e| e.to_string()),
             Stage::Concepts => {

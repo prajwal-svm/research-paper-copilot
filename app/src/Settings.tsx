@@ -7,6 +7,7 @@ import {
   CloudIcon,
   GraduationCapIcon,
   HardDriveIcon,
+  PaletteIcon,
   SettingsIcon,
   SlidersHorizontalIcon,
   Trash2Icon,
@@ -26,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
+import { applyPrimaryColor, currentPrimaryColor, PRIMARY_COLORS } from "./theme";
 import DiskHygiene from "./DiskHygiene";
 import LearningData from "./LearningData";
 import ProviderPresets from "./ProviderPresets";
@@ -46,11 +48,19 @@ const PROVIDER_LABEL: Record<ProviderKind, string> = {
   ollama: "Ollama (local)",
 };
 
-type Section = "providers" | "presets" | "sync" | "learning" | "storage" | "privacy";
+type Section =
+  | "providers"
+  | "presets"
+  | "appearance"
+  | "sync"
+  | "learning"
+  | "storage"
+  | "privacy";
 
 const SECTIONS: { id: Section; label: string; icon: React.ComponentType }[] = [
   { id: "providers", label: "AI providers", icon: BotIcon },
   { id: "presets", label: "Presets & models", icon: SlidersHorizontalIcon },
+  { id: "appearance", label: "Appearance", icon: PaletteIcon },
   { id: "sync", label: "Sync", icon: CloudIcon },
   { id: "learning", label: "Learning data", icon: GraduationCapIcon },
   { id: "storage", label: "Storage", icon: HardDriveIcon },
@@ -61,6 +71,7 @@ const SECTION_BLURB: Record<Section, string> = {
   providers:
     "Bring your own key, or run models locally with Ollama. Keys are validated with a test call and stored in your OS keychain.",
   presets: "Provider presets, custom endpoints, and per-tier model routing.",
+  appearance: "How the app looks on this machine.",
   sync: "Your library on every device — bring your own storage, end-to-end encrypted.",
   learning: "What the app has learned about your understanding — local, inspectable, deletable.",
   storage: "Caches that are safe to clear.",
@@ -124,6 +135,7 @@ export default function Settings({
               </DialogHeader>
               {section === "providers" && open && <ProvidersSection />}
               {section === "presets" && <ProviderPresets />}
+              {section === "appearance" && <AppearanceSection />}
               {section === "sync" && <SyncSettings />}
               {section === "learning" && <LearningData />}
               {section === "storage" && <DiskHygiene />}
@@ -233,6 +245,44 @@ function ProvidersSection() {
   );
 }
 
+/** Primary color choice, applied instantly and persisted per machine. */
+function AppearanceSection() {
+  const [color, setColor] = useState(currentPrimaryColor());
+
+  return (
+    <Field>
+      <FieldLabel>Primary color</FieldLabel>
+      <div className="flex flex-wrap gap-2">
+        {PRIMARY_COLORS.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            title={option.name}
+            aria-label={option.name}
+            className={
+              "flex size-8 cursor-pointer items-center justify-center rounded-full transition-transform hover:scale-110" +
+              (color === option.value
+                ? " ring-2 ring-foreground ring-offset-2 ring-offset-background"
+                : "")
+            }
+            style={{ backgroundColor: option.value }}
+            onClick={() => {
+              applyPrimaryColor(option.value);
+              setColor(option.value);
+            }}
+          >
+            {color === option.value && <CheckIcon className="size-4 text-white" />}
+          </button>
+        ))}
+      </div>
+      <FieldDescription>
+        Used for buttons, selections, and highlights across the app. Stored on
+        this machine.
+      </FieldDescription>
+    </Field>
+  );
+}
+
 function PrivacySection() {
   const [enabled, setEnabled] = useState(false);
 
@@ -253,7 +303,7 @@ function PrivacySection() {
       <Switch id="telemetry-toggle" checked={enabled} onCheckedChange={toggle} />
       <FieldDescription>
         Off by default. When on, anonymous counters (session health, feature
-        usage, answer thumbs) are stored locally on this machine — never paper
+        usage) are stored locally on this machine — never paper
         content, notes, or questions, and nothing is transmitted anywhere.
       </FieldDescription>
     </Field>

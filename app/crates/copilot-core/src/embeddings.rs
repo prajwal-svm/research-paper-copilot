@@ -70,16 +70,44 @@ impl Embedder {
         use candle_core::{DType, Device};
         use candle_nn::VarBuilder;
         use candle_transformers::models::bert::{BertModel, Config};
-        use hf_hub::{api::sync::Api, Repo, RepoType};
 
         let err = |e: String| EmbeddingsError::Model(e);
-        let api = Api::new().map_err(|e| err(e.to_string()))?;
-        let repo = api.repo(Repo::new(EMBEDDING_MODEL_NAME.to_string(), RepoType::Model));
-        let config_path = repo.get("config.json").map_err(|e| err(e.to_string()))?;
-        let tokenizer_path = repo.get("tokenizer.json").map_err(|e| err(e.to_string()))?;
-        let weights_path = repo
-            .get("model.safetensors")
-            .map_err(|e| err(e.to_string()))?;
+
+        // Local-first model resolution. hf_hub's `Api::repo().get()` always
+        // makes a metadata HEAD request to huggingface.co — even when the file
+        // is already cached — and that call hangs indefinitely on a stalled
+        // connection (proxy, captive portal, throttled wifi), which freezes
+        // the whole ingestion pipeline on "Building search index". `Cache` is
+        // a pure local lookup: it reads `refs/main` → `snapshots/<hash>/` and
+        // returns the path with zero network I/O. We only fall back to the
+        // network `Api` when the model genuinely isn't cached yet.
+        let cache = hf_hub::Cache::from_env();
+        let cached = cache.model(EMBEDDING_MODEL_NAME.to_string());
+        let (config_path, tokenizer_path, weights_path) = match (
+            cached.get("config.json"),
+            cached.get("tokenizer.json"),
+            cached.get("model.safetensors"),
+        ) {
+            (Some(c), Some(t), Some(w)) => (c, t, w),
+            _ => {
+                use hf_hub::api::sync::ApiBuilder;
+                use hf_hub::{Repo, RepoType};
+                // First run: download once. Single retry so a flaky
+                // connection fails fast (and degrades to exact-only search)
+                // instead of looping or hanging.
+                let api = ApiBuilder::new()
+                    .with_retries(1)
+                    .build()
+                    .map_err(|e| err(e.to_string()))?;
+                let repo = api.repo(Repo::new(EMBEDDING_MODEL_NAME.to_string(), RepoType::Model));
+                (
+                    repo.get("config.json").map_err(|e| err(e.to_string()))?,
+                    repo.get("tokenizer.json").map_err(|e| err(e.to_string()))?,
+                    repo.get("model.safetensors")
+                        .map_err(|e| err(e.to_string()))?,
+                )
+            }
+        };
 
         let config: Config =
             serde_json::from_slice(&std::fs::read(&config_path).map_err(|e| err(e.to_string()))?)
@@ -87,6 +115,11 @@ impl Embedder {
         let tokenizer =
             tokenizers::Tokenizer::from_file(&tokenizer_path).map_err(|e| err(e.to_string()))?;
 
+        // Apple Silicon: the GPU cuts "Building search index" from minutes
+        // to seconds. Anything else (or a Metal init failure) uses the CPU.
+        #[cfg(all(target_os = "macos", feature = "native"))]
+        let device = Device::new_metal(0).unwrap_or(Device::Cpu);
+        #[cfg(not(all(target_os = "macos", feature = "native")))]
         let device = Device::Cpu;
         let vb = unsafe {
             VarBuilder::from_mmaped_safetensors(&[weights_path], DType::F32, &device)
@@ -102,10 +135,22 @@ impl Embedder {
 
     /// Embed a batch of texts → L2-normalized vectors of [`EMBEDDING_DIM`].
     pub fn embed(&self, texts: &[&str]) -> Result<Vec<Vec<f32>>, EmbeddingsError> {
+        self.embed_progress(texts, |_, _| {})
+    }
+
+    /// Embed with per-chunk progress. `on_progress(done, total)` is called
+    /// after each batch of 16, so callers can report how far a long paper has
+    /// gotten instead of appearing frozen.
+    pub fn embed_progress(
+        &self,
+        texts: &[&str],
+        mut on_progress: impl FnMut(usize, usize),
+    ) -> Result<Vec<Vec<f32>>, EmbeddingsError> {
         use candle_core::Tensor;
         let err = |e: String| EmbeddingsError::Model(e);
 
-        let mut out = Vec::with_capacity(texts.len());
+        let total = texts.len();
+        let mut out = Vec::with_capacity(total);
         // Batch in small chunks to bound memory on long papers.
         for chunk in texts.chunks(16) {
             let mut tokenizer = self.tokenizer.clone();
@@ -158,6 +203,8 @@ impl Embedder {
                 v.iter_mut().for_each(|x| *x /= norm);
                 out.push(v);
             }
+
+            on_progress(out.len(), total);
         }
         Ok(out)
     }
@@ -182,9 +229,14 @@ fn embeddable(object_type: ObjectType) -> bool {
 
 /// Run stage 4: embed objects, write `embeddings.bin` + `embeddings_index.json`,
 /// backfill `embedding.index` in `semantic_tree.json`, pin the model in metadata.
+///
+/// `on_progress(done, total)` fires after each batch, so the pipeline can stream
+/// intra-stage progress (otherwise a long paper looks frozen on "Building search
+/// index").
 pub fn run_embeddings_stage(
     bundle: &Bundle,
     embedder: &Embedder,
+    on_progress: impl FnMut(usize, usize),
 ) -> Result<usize, EmbeddingsError> {
     let started_at = crate::bundle::now_rfc3339();
     let mut tree: SemanticTreeDocument = bundle
@@ -200,7 +252,7 @@ pub fn run_embeddings_stage(
         .collect();
 
     let texts: Vec<&str> = targets.iter().map(|(_, _, t)| t.as_str()).collect();
-    let vectors = embedder.embed(&texts)?;
+    let vectors = embedder.embed_progress(&texts, on_progress)?;
 
     // Write embeddings.bin (raw f32 LE rows) atomically.
     let mut bytes = Vec::with_capacity(vectors.len() * EMBEDDING_DIM * 4);

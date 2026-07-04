@@ -76,7 +76,13 @@ export function useAiStream(paperId: string) {
   }, []);
 
   const start = useCallback(
-    (objectId: string, action: AiAction, question?: string, adhocText?: string) => {
+    (
+      objectId: string,
+      action: AiAction,
+      question?: string,
+      adhocText?: string,
+      images?: { media_type: string; data_b64: string }[],
+    ) => {
       const requestId = crypto.randomUUID();
       activeRequest.current = requestId;
       setState({ ...IDLE, streaming: true });
@@ -87,6 +93,7 @@ export function useAiStream(paperId: string) {
         action,
         question: question ?? null,
         adhocText: adhocText ?? null,
+        images: images && images.length > 0 ? images : null,
       }).catch((e) => {
         // Errors before any event (e.g. no provider) land here.
         if (activeRequest.current === requestId) {

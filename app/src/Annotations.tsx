@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { invoke } from "@/platform";
 import { saveFileDialog } from "@/platform";
-import { BookmarkIcon, DownloadIcon, NotebookPenIcon, Trash2Icon } from "lucide-react";
+import { BookmarkIcon, DownloadIcon, Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -30,18 +30,16 @@ export interface Bookmark {
   added_at: string;
 }
 
-/** Notes + bookmark controls for one object (task 7.1), inside the panel. */
+/** Notes list + editor for one object (task 7.1), inside the panel. */
 export function ObjectAnnotations({
   paperId,
   object,
   notes,
-  bookmarked,
   onChanged,
 }: {
   paperId: string;
   object: PaperObject;
   notes: Note[];
-  bookmarked: boolean;
   onChanged: () => void;
 }) {
   const [editing, setEditing] = useState<{ noteId: string; initial: string } | null>(null);
@@ -64,35 +62,8 @@ export function ObjectAnnotations({
     onChanged();
   }
 
-  async function toggleBookmark() {
-    await invoke("bookmark_toggle", {
-      paperId,
-      objectId: object.id,
-      anchorHash: object.content_hash,
-    }).catch(() => {});
-    onChanged();
-  }
-
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex gap-1.5">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            draft.current = "";
-            setEditing({ noteId: crypto.randomUUID(), initial: "" });
-          }}
-        >
-          <NotebookPenIcon data-icon="inline-start" />
-          Add note
-        </Button>
-        <Button variant={bookmarked ? "secondary" : "outline"} size="sm" onClick={toggleBookmark}>
-          <BookmarkIcon data-icon="inline-start" />
-          {bookmarked ? "Bookmarked" : "Bookmark"}
-        </Button>
-      </div>
-
       {objectNotes.map((note) =>
         editing?.noteId === note.note_id ? null : (
           <div key={note.note_id} className="group rounded-md border p-2 text-sm">

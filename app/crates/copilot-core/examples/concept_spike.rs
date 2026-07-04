@@ -60,6 +60,7 @@ fn main() {
             &[ChatMessage {
                 role: "user".into(),
                 content: prompt,
+                images: vec![],
             }],
             &mut |_| {},
         )

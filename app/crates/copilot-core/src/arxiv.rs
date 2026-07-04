@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, thiserror::Error)]
 pub enum ImportFetchError {
-    #[error("that doesn't look like an arXiv URL, arXiv id, or DOI: {0}")]
+    #[error("that doesn't look like an arXiv URL, arXiv id, DOI, or PDF link: {0}")]
     Unrecognized(String),
     #[error("network unavailable or the server did not respond: {0}")]
     Network(String),
@@ -24,6 +24,8 @@ pub struct FetchedPaper {
     pub arxiv_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub doi: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub published_at: Option<String>,
     pub pdf: Vec<u8>,
 }
 
@@ -52,20 +54,30 @@ pub fn parse_arxiv_id(input: &str) -> Option<String> {
         .then(|| base.to_string())
 }
 
-/// Is this a DOI ("10.xxxx/…") or a doi.org URL?
+/// Is this a DOI ("10.xxxx/…") — raw, or embedded in any URL that carries
+/// one in its path (doi.org, dl.acm.org/doi/…, journal permalinks)?
 pub fn parse_doi(input: &str) -> Option<String> {
     let input = input.trim();
-    let candidate = if let Some(pos) = input.find("doi.org/") {
-        &input[pos + 8..]
+    let start = if input.starts_with("10.") {
+        0
     } else {
-        input
+        input.find("/10.")? + 1
     };
-    candidate
-        .starts_with("10.")
-        .then(|| candidate.trim_end_matches('/').to_string())
+    let candidate = input[start..]
+        .split(['?', '#'])
+        .next()
+        .unwrap_or_default()
+        .trim_end_matches('/');
+    let (registrant, suffix) = candidate.split_once('/')?;
+    // Registrants are "10." + 4-9 digits; anything shorter is a path that
+    // merely looks DOI-ish (e.g. "/v10.2/").
+    (registrant.len() >= 7
+        && registrant[3..].chars().all(|c| c.is_ascii_digit())
+        && !suffix.is_empty())
+    .then(|| candidate.to_string())
 }
 
-/// Fetch a paper by arXiv URL/id or DOI.
+/// Fetch a paper by arXiv URL/id, DOI, or a URL pointing directly at a PDF.
 pub fn fetch(input: &str) -> Result<FetchedPaper, ImportFetchError> {
     if let Some(arxiv_id) = parse_arxiv_id(input) {
         return fetch_arxiv(&arxiv_id);
@@ -73,7 +85,63 @@ pub fn fetch(input: &str) -> Result<FetchedPaper, ImportFetchError> {
     if let Some(doi) = parse_doi(input) {
         return fetch_doi(&doi);
     }
+    let trimmed = input.trim();
+    if trimmed.starts_with("http://") || trimmed.starts_with("https://") {
+        return fetch_pdf_url(trimmed);
+    }
     Err(ImportFetchError::Unrecognized(input.to_string()))
+}
+
+/// Readable title from a PDF link: decoded filename stem, else the URL.
+fn title_from_pdf_url(url: &str) -> String {
+    let path = url.split(['?', '#']).next().unwrap_or(url);
+    let name = path.trim_end_matches('/').rsplit('/').next().unwrap_or(path);
+    let stem = name
+        .strip_suffix(".pdf")
+        .or_else(|| name.strip_suffix(".PDF"))
+        .unwrap_or(name);
+    let cleaned = stem.replace(['-', '_', '+'], " ").replace("%20", " ");
+    let cleaned = cleaned.trim();
+    if cleaned.is_empty() {
+        url.to_string()
+    } else {
+        cleaned.to_string()
+    }
+}
+
+/// Any other http(s) URL: fetch it and import when the response is a PDF
+/// (direct links like `…/paper.pdf`). The PDF's embedded metadata title —
+/// confirmed against Crossref — gives the real title, authors, DOI, and
+/// published date; the filename is only the last resort.
+fn fetch_pdf_url(url: &str) -> Result<FetchedPaper, ImportFetchError> {
+    let response = http_get(url)?;
+    let content_type = response.content_type().to_string();
+    let mut reader = response.into_reader();
+    let mut pdf = Vec::new();
+    std::io::Read::read_to_end(&mut reader, &mut pdf)
+        .map_err(|e| ImportFetchError::Network(e.to_string()))?;
+    if !pdf.starts_with(b"%PDF") {
+        return Err(ImportFetchError::NotFound(format!(
+            "{url} did not return a PDF (got {content_type}); paste an arXiv link, DOI, or a direct PDF link"
+        )));
+    }
+    let metadata_title = crate::identify::pdf_metadata_title(&pdf);
+    let identified = metadata_title
+        .as_deref()
+        .and_then(crate::identify::crossref_identify)
+        .unwrap_or_default();
+    Ok(FetchedPaper {
+        title: identified
+            .title
+            .or(metadata_title)
+            .unwrap_or_else(|| title_from_pdf_url(url)),
+        authors: identified.authors,
+        abstract_text: None,
+        arxiv_id: None,
+        doi: identified.doi,
+        published_at: identified.published_at,
+        pdf,
+    })
 }
 
 fn http_get(url: &str) -> Result<ureq::Response, ImportFetchError> {
@@ -123,6 +191,7 @@ fn fetch_arxiv(arxiv_id: &str) -> Result<FetchedPaper, ImportFetchError> {
         abstract_text,
         arxiv_id: Some(arxiv_id.to_string()),
         doi: None,
+        published_at: xml_text(entry, "published"),
         pdf,
     })
 }
@@ -187,6 +256,7 @@ fn fetch_doi(doi: &str) -> Result<FetchedPaper, ImportFetchError> {
         abstract_text: None,
         arxiv_id: None,
         doi: Some(doi.to_string()),
+        published_at: crate::identify::issued_date(message),
         pdf,
     })
 }
@@ -236,7 +306,31 @@ mod tests {
             parse_doi("10.48550/arXiv.1706.03762").as_deref(),
             Some("10.48550/arXiv.1706.03762")
         );
+        // Publisher URLs that embed the DOI in their path.
+        assert_eq!(
+            parse_doi("https://dl.acm.org/doi/10.1145/3730567.3764462").as_deref(),
+            Some("10.1145/3730567.3764462")
+        );
+        assert_eq!(
+            parse_doi("https://dl.acm.org/doi/abs/10.1145/3730567.3764462?tab=1").as_deref(),
+            Some("10.1145/3730567.3764462")
+        );
         assert_eq!(parse_doi("1706.03762"), None);
+        // DOI-ish path segments are not DOIs.
+        assert_eq!(parse_doi("https://example.com/v10.2/file.pdf"), None);
+        assert_eq!(parse_doi("https://packetfilters.cs.iit.edu/patchwork/patchwork.pdf"), None);
+    }
+
+    #[test]
+    fn pdf_url_titles_are_readable() {
+        assert_eq!(
+            title_from_pdf_url("https://packetfilters.cs.iit.edu/patchwork/patchwork.pdf"),
+            "patchwork"
+        );
+        assert_eq!(
+            title_from_pdf_url("https://example.com/papers/attention-is-all-you-need.pdf?dl=1"),
+            "attention is all you need"
+        );
     }
 
     #[test]

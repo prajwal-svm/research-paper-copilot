@@ -32,6 +32,7 @@ fn main() {
         let messages = [ChatMessage {
             role: "user".to_string(),
             content: prompt.to_string(),
+            images: vec![],
         }];
         provider.stream_chat(&messages, &mut |_| {}).ok()
     };

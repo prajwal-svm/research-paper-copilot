@@ -16,7 +16,7 @@ export interface PaperSummary {
   priority?: "high" | "medium" | "low";
 }
 
-export type PipelineStage = "layout" | "objects" | "enrichment" | "embeddings";
+export type PipelineStage = "layout" | "objects" | "enrichment" | "concepts" | "embeddings";
 
 export type PipelineProgressEvent =
   | { kind: "stage_started"; stage: PipelineStage }
@@ -24,11 +24,24 @@ export type PipelineProgressEvent =
   | { kind: "stage_skipped"; stage: PipelineStage }
   | { kind: "stage_degraded"; stage: PipelineStage; reason: string }
   | { kind: "stage_failed"; stage: PipelineStage; reason: string }
+  | { kind: "stage_progress"; stage: PipelineStage; done: number; total: number }
   | { kind: "pipeline_finished"; usable: boolean };
 
 export interface IngestionProgress {
   paper_id: string;
   event: PipelineProgressEvent;
+}
+
+// ---- Workspace store (workspace.db): paper-independent entities ----
+
+export type WorkspaceItemKind = "note" | "canvas" | "chat";
+
+export interface WorkspaceItem {
+  id: string;
+  kind: WorkspaceItemKind | string;
+  title: string;
+  created_at: string;
+  updated_at: string;
 }
 
 // ---- .research bundle artifacts (subset the reader consumes) ----

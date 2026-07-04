@@ -30,6 +30,8 @@ pub mod figures_tables;
 pub mod gaps;
 #[cfg(feature = "native")]
 pub mod graph_index;
+#[cfg(feature = "native")]
+pub mod identify;
 pub mod implementations;
 pub mod layout;
 pub mod learning;
@@ -41,6 +43,7 @@ pub mod objects;
 pub mod pipeline;
 pub mod plugin;
 pub mod provider_config;
+pub mod refs_context;
 pub mod registry;
 pub mod reproduction;
 pub mod reviews;
@@ -51,6 +54,8 @@ pub mod schemas;
 pub mod search;
 pub mod sync;
 pub mod telemetry;
+#[cfg(feature = "native")]
+pub mod workspace;
 
 /// Core crate version, surfaced to the shell for diagnostics.
 pub fn version() -> &'static str {

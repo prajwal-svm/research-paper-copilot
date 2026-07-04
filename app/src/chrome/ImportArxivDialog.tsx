@@ -66,16 +66,17 @@ export default function ImportArxivDialog({
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Import from arXiv / DOI</DialogTitle>
+          <DialogTitle>Import from a link</DialogTitle>
           <DialogDescription>
-            Paste an arXiv URL, arXiv id (e.g. 1706.03762), or DOI. The PDF
-            is fetched and processed into your library.
+            Paste an arXiv URL, arXiv id (e.g. 1706.03762), a DOI or DOI
+            link, or a direct link to a PDF. The PDF is fetched and
+            processed into your library.
           </DialogDescription>
         </DialogHeader>
 
         <FieldGroup>
           <Field data-invalid={error ? true : undefined}>
-            <FieldLabel htmlFor="arxiv-input">arXiv URL / id / DOI</FieldLabel>
+            <FieldLabel htmlFor="arxiv-input">arXiv / DOI / PDF link</FieldLabel>
             <Input
               id="arxiv-input"
               autoFocus

@@ -10,6 +10,25 @@ function systemTheme(): Theme {
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
+/** App theme, reactively: tracks the `.dark` class the toggle flips, so
+ * canvases (and any consumer) restyle live on theme change. */
+export function useAppDark(): boolean {
+  const [dark, setDark] = useState(() =>
+    document.documentElement.classList.contains("dark"),
+  );
+  useEffect(() => {
+    const observer = new MutationObserver(() =>
+      setDark(document.documentElement.classList.contains("dark")),
+    );
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+    return () => observer.disconnect();
+  }, []);
+  return dark;
+}
+
 function storedTheme(): Theme | null {
   const value = localStorage.getItem(STORAGE_KEY);
   return value === "light" || value === "dark" ? value : null;
